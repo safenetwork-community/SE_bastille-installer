@@ -1,4 +1,4 @@
-# SE_bastille-installer
+# SE Bastille Installer
 
 Scripts for installing Artix ARM directly to SD/eMMC cards or USB sticks without the need for images.  
 
