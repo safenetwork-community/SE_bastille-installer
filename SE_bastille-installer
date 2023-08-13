@@ -1,0 +1,344 @@
+#! /bin/bash
+
+# Set globals
+# *****************************
+VERSION="0.1.0"
+# *****************************
+ARCH='aarch64'
+CARCH=$(uname -m)
+OS="SE Bastille installer"
+TITLE="${OS} v${VERSION}"
+
+# set colorscheme
+export DIALOGRC="./dialogrc_gui"
+
+# clearing variables
+DEVICE=""
+EDITION=""
+USER=""
+USERGROUPS=""
+FULLNAME=""
+PASSWORD=""
+CONFIRMPASSWORD=""
+CONFIRMROOTPASSWORD=""
+ROOTPASSWORD=""
+SDCARD=""
+SDTYP=""
+SDDEV=""
+DEV_NAME=""
+FSTYPE=""
+TIMEZONE=""
+LOCALE=""
+HOSTNAME=""
+CRYPT=""
+
+# check if root
+if [ "$EUID" -ne 0 ]; then
+    echo "*******************************************************************************************"
+    echo "*                                                                                         *"
+    echo "*     This script requires root permissions to run. Please run as root or with doas!      *"
+    echo "*                                                                                         *"
+    echo "*******************************************************************************************"
+  exit
+fi
+
+# Sanity checks for dependencies
+declare -a DEPENDENCIES=\
+("git" "parted" "wget" "dialog" "bsdtar" "openssl" "awk" "btrfs" "mkfs.vfat" "mkfs.btrfs" "mkfs.f2fs" "cryptsetup")
+
+for i in "${DEPENDENCIES[@]}"; do
+  if ! [[ -f "/bin/$i" || -f "/sbin/$i" || -f "/usr/bin/$i" || -f "/usr/sbin/$i" ]] ; then
+    echo "$i command is missing! Please install the relevant package."
+    exit 1
+  fi
+done
+
+#if [[ "$CARCH" != "aarch64" ]]; then
+#if [ ! -f "/usr/lib/binfmt.d/qemu-aarch64-static.conf" ]; then
+#    echo "qemu-aarch64-static.conf file is missing. Please install the relevant package."
+#    exit 1
+#fi
+#fi
+
+# Functions
+msg() {
+  ALL_OFF="\e[1;0m"
+  BOLD="\e[1;1m"
+  GREEN="${BOLD}\e[1;32m"
+  local mesg=$1; shift
+  printf "${GREEN}==>${ALL_OFF}${BOLD} ${mesg}${ALL_OFF}\n" "$@" >&2
+}
+
+get_timer(){
+    echo $(date +%s)
+}
+
+# Username dialog
+USER=$(dialog --clear --title "${TITLE}" \
+  --inputbox "Enter the username you want: \
+  (usernames must be all lowercase and first character may not be a number)" \
+  10 90 "bas" 3>&1 1>&2 2>&3 3>&-)
+
+if [[ "$USER" =~ [A-Z] ]] || [[ "$USER" =~ ^[0-9] ]] || [[ "$USER" == *['!'@#\$%^\&*()_+]* ]]; then
+  clear
+  msg "${USER} Configuration aborted! Username contained invalid characters."
+  exit 1
+fi
+
+if [ ! -z "$USER" ]
+then
+FULLNAME=$(dialog --clear --title "${TITLE}" \
+  --inputbox "Enter desired Full Name for $USER:" \
+  8 50 "Bastille Useur" 3>&1 1>&2 2>&3 3>&-)
+else
+  clear
+  exit 1
+fi
+
+if [ ! -z "$FULLNAME" ]; then
+  if [[ "$EDITION" != "phosh" ]]; then
+    PASSWORD=$(dialog --clear --title "${TITLE}" \
+    --insecure --passwordbox "Enter new Password for $USER:" \
+    8 50 3>&1 1>&2 2>&3 3>&-)
+  fi
+else 
+    clear
+    exit 1
+fi
+
+if [ ! -z "$PASSWORD" ]; then
+  if [[ "$EDITION" != "phosh" ]]; then
+    CONFIRMPASSWORD=$(dialog --clear --title "${TITLE}" \
+    --insecure --passwordbox "Confirm new Password for $USER:" \
+    8 50 3>&1 1>&2 2>&3 3>&-)
+  fi
+else 
+  clear
+  exit 1
+fi
+
+if [[ "$PASSWORD" != "$CONFIRMPASSWORD" ]]; then
+  clear
+  msg "User passwords do not match! Please restart the installer and try again."
+  exit 1
+fi
+
+if [ ! -z "$CONFIRMPASSWORD" ]; then
+  ROOTPASSWORD=$(dialog --clear --title "${TITLE}" \
+  --insecure --passwordbox "Enter new Root Password:" \
+  8 50 3>&1 1>&2 2>&3 3>&-)
+else 
+  clear
+  exit 1
+fi
+
+if [ ! -z "$ROOTPASSWORD" ]; then
+  CONFIRMROOTPASSWORD=$(dialog --clear --title "${TITLE}" \
+  --insecure --passwordbox "Confirm new Root Password:" \
+  8 50 3>&1 1>&2 2>&3 3>&-)
+else 
+  clear
+  exit 1
+fi
+
+if [[ "$ROOTPASSWORD" != "$CONFIRMROOTPASSWORD" ]]; then
+    clear
+    msg "Root passwords do not match! Please restart the installer and try again."
+    exit 1
+fi
+
+# Drive dialog. 
+# Uses simple command to put the results of lsblk 
+# (just the names of the devices) 
+# into an array and make that array populate the options	
+if [ ! -z "$CONFIRMROOTPASSWORD" ]; then
+    let i=0
+    W=()
+    while read -r line; do
+      let i=$i+1
+      W+=($line "")
+    done < <( lsblk -dn -o NAME | tail -n +2 )
+   
+    if [[ ${#W[@]} -eq 0 ]]; then
+      clear
+      msg "Configuration aborted! No drive found."
+      exit 1
+    fi
+
+    SDCARD=$(dialog --title "${TITLE}" \
+    --menu "Choose your SDCard/eMMC/USB - Be sure the correct drive is selected! 
+    WARNING! This WILL destroy the data on it!" \
+    20 50 10 "${W[@]}" 3>&2 2>&1 1>&3)
+
+    DEV_NAME=$SDCARD
+    SDCARD=/dev/$SDCARD
+    SDTYP=${SDCARD:5:2}
+else 
+  clear
+  exit 1
+fi
+
+if [[ "$SDTYP" = "sd" ]]; then
+  SDDEV=""
+elif [[ "$SDTYP" = "mm" || "$SDTYP" = "nv" ]]; then
+  SDDEV="p"
+else 
+  clear
+  echo "Unkown Block Device Type"
+  exit 1
+fi
+
+if [ ! -z "$FSTYPE" ]; then
+  let i=0
+  W=()
+  while read -r line; do
+    let i=$i+1
+    W+=($line "")
+  done < <( timedatectl list-timezones )
+  TIMEZONE=$(dialog --clear --title "${TITLE}" \
+    --menu "Choose your timezone!" 20 50 15 \
+    "${W[@]}" 3>&1 1>&2 2>&3 3>&-)
+else 
+  clear
+  exit 1
+fi
+
+
+if [ ! -z "$TIMEZONE" ]; then
+  let i=0
+  W=()
+  while read -r line; do
+    let i=$i+1
+    W+=($line "")
+  done < <( cat /etc/locale.gen | grep "UTF-8" | tail -n +2 | sed -e 's/^#*//' | awk '{print $1}' )
+  LOCALE=$(dialog --clear --title "${TITLE}" \
+  --menu "Choose your locale!" \
+  20 50 15 "${W[@]}" 3>&1 1>&2 2>&3 3>&-)
+else 
+  clear
+  exit 1
+fi
+
+if [ ! -z "$LOCALE" ]; then
+  let i=0
+  W=()
+  while read -r line; do
+    let i=$i+1
+    W+=($line "")
+  done < <( localectl list-keymaps )
+  CLIKEYMAP=$(dialog --clear --title "${TITLE}" \
+  --menu "Choose your TTY keyboard layout:" \
+  20 50 15 "${W[@]}" 3>&1 1>&2 2>&3 3>&-)
+else 
+  clear
+  exit 1
+fi
+
+if [[ "$EDITION" != "minimal" ]]; then
+if [ ! -z "$CLIKEYMAP" ]; then
+  let i=0
+  W=()
+  while read -r line; do
+    let i=$i+1
+    W+=($line "")
+  done < <( localectl list-x11-keymap-layouts )
+  X11KEYMAP=$(dialog --clear --title "${TITLE}" \
+    --menu "Choose your X11 keyboard layout:" \
+    20 50 15 "${W[@]}" 3>&1 1>&2 2>&3 3>&-)
+else 
+  clear
+  exit 1
+fi
+fi
+
+if [ ! -z "$CLIKEYMAP" ]; then
+  HOSTNAME=$(dialog --clear --title "${TITLE}" \
+    --inputbox "Enter desired hostname for this system:" 8 50 \
+    3>&1 1>&2 2>&3 3>&-)
+if [ ! -z "$FSTYPE" ]; then
+  let i=0
+  W=()
+  while read -r line; do
+    let i=$i+1
+    W+=($line "")
+  done < <( timedatectl list-timezones )
+  TIMEZONE=$(dialog --clear --title "${TITLE}" \
+    --menu "Choose your timezone!" \
+    20 50 15 "${W[@]}" 3>&1 1>&2 2>&3 3>&-)
+else 
+  clear
+  exit 1
+fi
+
+
+if [ ! -z "$TIMEZONE" ]; then
+  let i=0
+  W=()
+  while read -r line; do
+    let i=$i+1
+    W+=($line "")
+  done < <( cat /etc/locale.gen | grep "UTF-8" | tail -n +2 | sed -e 's/^#*//' | awk '{print $1}' )
+  LOCALE=$(dialog --clear --title "${TITLE}" \
+    --menu "Choose your locale!" \
+    20 50 15 "${W[@]}" 3>&1 1>&2 2>&3 3>&-)
+else 
+  clear
+  exit 1
+fi
+
+if [ ! -z "$LOCALE" ]; then
+  let i=0
+  W=()
+  while read -r line; do
+    let i=$i+1
+    W+=($line "")
+  done < <( localectl list-keymaps )
+  CLIKEYMAP=$(dialog --clear --title "${TITLE}" \
+    --menu "Choose your TTY keyboard layout:" 
+    20 50 15 "${W[@]}" 3>&1 1>&2 2>&3 3>&-)
+else 
+  clear
+  exit 1
+fi
+
+if [ ! -z "$CLIKEYMAP" ]; then
+  HOSTNAME=$(dialog --clear --title "${TITLE}" \
+    --inputbox "Enter desired hostname for this system:" \
+    8 50 3>&1 1>&2 2>&3 3>&-)
+else 
+  clear
+  exit 1
+fi
+fi
+
+if [ ! -z "$HOSTNAME" ]; then
+  dialog --clear --title "${TITLE}" \
+  --yesno "Is the below information correct:
+  Username = $USER
+  Full Username = $FULLNAME
+  Additional usergroups = $USERGROUPS
+  Password for $USER = (password hidden)
+  Password for root = (password hidden)
+  SDCard/eMMC/USB = $SDCARD
+  Filesystem = $FSTYPE
+  Timezone = $TIMEZONE
+  Locale = $LOCALE
+  TTY Keyboard layout = $CLIKEYMAP
+  Hostname = $HOSTNAME" \
+  25 70 3>&1 1>&2 2>&3 3>&-)
+fi
+else
+  clear
+  exit 1
+fi
+
+
+
+# Commands
+timer_start=$(get_timer)
+
+# prepare_card
+# create_install
+# cleanup
+# show_elapsed_time "${FUNCNAME}" "${timer_start}"
+sync
