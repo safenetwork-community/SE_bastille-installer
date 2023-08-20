@@ -44,7 +44,7 @@ fi
 
 # Sanity checks for dependencies
 declare -a DEPENDENCIES=\
-("git" "parted" "wget" "dialog" "bsdtar" "openssl" "awk" "btrfs" "mkfs.vfat" "mkfs.btrfs" "mkfs.f2fs" "cryptsetup")
+("git" "parted" "wget" "dialog" "openssl" "awk" "btrfs" "mkfs.vfat" "mkfs.btrfs")
 
 for i in "${DEPENDENCIES[@]}"; do
   if ! [[ -f "/bin/$i" || -f "/sbin/$i" || -f "/usr/bin/$i" || -f "/usr/sbin/$i" ]] ; then
