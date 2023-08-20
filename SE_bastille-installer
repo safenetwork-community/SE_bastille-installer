@@ -13,24 +13,27 @@ TITLE="${OS} v${VERSION}"
 export DIALOGRC="./dialogrc_gui"
 
 # clearing variables
-DEVICE=""
-EDITION=""
-USER=""
-USERGROUPS=""
-FULLNAME=""
-PASSWORD=""
 CONFIRMPASSWORD=""
 CONFIRMROOTPASSWORD=""
+CRYPT=""
+DEVICE=""
+DEV_NAME=""
+EDITION=""
+FSTYPE=""
+FULLNAME=""
+HOST_NAME=""
+KEYMAP_CLI=""
+KEYMAP_HOST=""
+KEYVAR_HOST=""
+LOCALE=""
+PASSWORD=""
 ROOTPASSWORD=""
+SDDEV=""
 SDCARD=""
 SDTYP=""
-SDDEV=""
-DEV_NAME=""
-FSTYPE=""
+USER=""
+USERGROUPS=""
 TIMEZONE=""
-LOCALE=""
-HOSTNAME=""
-CRYPT=""
 
 # check if root
 if [ "$EUID" -ne 0 ]; then
@@ -53,13 +56,6 @@ for i in "${DEPENDENCIES[@]}"; do
   fi
 done
 
-#if [[ "$CARCH" != "aarch64" ]]; then
-#if [ ! -f "/usr/lib/binfmt.d/qemu-aarch64-static.conf" ]; then
-#    echo "qemu-aarch64-static.conf file is missing. Please install the relevant package."
-#    exit 1
-#fi
-#fi
-
 # Functions
 msg() {
   ALL_OFF="\e[1;0m"
@@ -73,20 +69,56 @@ get_timer(){
     echo $(date +%s)
 }
 
-# Username dialog
-USER=$(dialog --clear --title "${TITLE}" \
-  --inputbox "Enter the username you want: \
-  (usernames must be all lowercase and first character may not be a number)" \
-  10 90 "bas" 3>&1 1>&2 2>&3 3>&-)
+# Keymap host dialog
+let i=0
+W=()
+while read -r line; do
+  let i=$i+1
+  W+=($line "")
+  echo $line
+done < <( ls /usr/share/kbd/keymaps )
+KEYMAP_HOST=$(dialog --clear --title "${TITLE}" \
+--menu "Choose your current keyboard layout:" \
+20 50 15 "${W[@]}" 3>&1 1>&2 2>&3 3>&-)
 
-if [[ "$USER" =~ [A-Z] ]] || [[ "$USER" =~ ^[0-9] ]] || [[ "$USER" == *['!'@#\$%^\&*()_+]* ]]; then
+# Keymap variant dialog 
+if [ ! -z "$KEYMAP_HOST" ]; then
+  let i=0
+  W=()
+  while read -r line; do
+    let i=$i+1
+    W+=($line "")
+    echo $line
+  done < <( ls /usr/share/kbd/keymaps/${KEYMAP_HOST} )
+
+  KEYVAR_HOST=$(dialog --clear --title "${TITLE}" \
+    --menu "Choose your current keyboard variant:" \
+  20 50 15 "${W[@]}" 3>&1 1>&2 2>&3 3>&-)
+else
   clear
-  msg "${USER} Configuration aborted! Username contained invalid characters."
   exit 1
 fi
 
-if [ ! -z "$USER" ]
-then
+# Username dialog 
+if [ ! -z "$KEYVAR_HOST" ]; then
+  setup-keymap ${KEYMAP_HOST} ${KEYVAR_HOST}
+  USER=$(dialog --clear --title "${TITLE}" \
+    --inputbox "Enter the username you want: \
+    (usernames must be all lowercase and first character may not be a number)" \
+  10 90 "bas" 3>&1 1>&2 2>&3 3>&-)
+
+  if [[ "$USER" =~ [A-Z] ]] || [[ "$USER" =~ ^[0-9] ]] || [[ "$USER" == *['!'@#\$%^\&*()_+]* ]]; then
+    clear
+    msg "${USER} Configuration aborted! Username contained invalid characters."
+    exit 1
+  fi
+else
+  clear
+  exit 1
+fi
+
+#Fullname dialog
+if [ ! -z "$USER" ]; then
 FULLNAME=$(dialog --clear --title "${TITLE}" \
   --inputbox "Enter desired Full Name for $USER:" \
   8 50 "Bastille Useur" 3>&1 1>&2 2>&3 3>&-)
@@ -157,7 +189,7 @@ if [ ! -z "$CONFIRMROOTPASSWORD" ]; then
     while read -r line; do
       let i=$i+1
       W+=($line "")
-    done < <( lsblk -dn -o NAME | tail -n +2 )
+    done < <( lsblk -dn -o NAME )
    
     if [[ ${#W[@]} -eq 0 ]]; then
       clear
@@ -226,7 +258,7 @@ if [ ! -z "$LOCALE" ]; then
     let i=$i+1
     W+=($line "")
   done < <( localectl list-keymaps )
-  CLIKEYMAP=$(dialog --clear --title "${TITLE}" \
+  KEYMAP_CLI=$(dialog --clear --title "${TITLE}" \
   --menu "Choose your TTY keyboard layout:" \
   20 50 15 "${W[@]}" 3>&1 1>&2 2>&3 3>&-)
 else 
@@ -235,7 +267,7 @@ else
 fi
 
 if [[ "$EDITION" != "minimal" ]]; then
-if [ ! -z "$CLIKEYMAP" ]; then
+if [ ! -z "$KEYMAP_CLI" ]; then
   let i=0
   W=()
   while read -r line; do
@@ -251,7 +283,7 @@ else
 fi
 fi
 
-if [ ! -z "$CLIKEYMAP" ]; then
+if [ ! -z "$KEYMAP_CLI" ]; then
   HOSTNAME=$(dialog --clear --title "${TITLE}" \
     --inputbox "Enter desired hostname for this system:" 8 50 \
     3>&1 1>&2 2>&3 3>&-)
@@ -293,7 +325,7 @@ if [ ! -z "$LOCALE" ]; then
     let i=$i+1
     W+=($line "")
   done < <( localectl list-keymaps )
-  CLIKEYMAP=$(dialog --clear --title "${TITLE}" \
+  KEYMAP_CLI=$(dialog --clear --title "${TITLE}" \
     --menu "Choose your TTY keyboard layout:" 
     20 50 15 "${W[@]}" 3>&1 1>&2 2>&3 3>&-)
 else 
@@ -301,7 +333,7 @@ else
   exit 1
 fi
 
-if [ ! -z "$CLIKEYMAP" ]; then
+if [ ! -z "$KEYMAP_CLI" ]; then
   HOSTNAME=$(dialog --clear --title "${TITLE}" \
     --inputbox "Enter desired hostname for this system:" \
     8 50 3>&1 1>&2 2>&3 3>&-)
@@ -323,7 +355,7 @@ if [ ! -z "$HOSTNAME" ]; then
   Filesystem = $FSTYPE
   Timezone = $TIMEZONE
   Locale = $LOCALE
-  TTY Keyboard layout = $CLIKEYMAP
+  TTY Keyboard layout = $KEYMAP_CLI
   Hostname = $HOSTNAME" \
   25 70 3>&1 1>&2 2>&3 3>&-)
 fi
