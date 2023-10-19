@@ -27,6 +27,7 @@ KEYMAP_HOST=""
 KEYVAR_HOST=""
 LOCALE=""
 PASSWORD=""
+RESPONSE=""
 ROOTPASSWORD=""
 SDDEV=""
 SDCARD=""
@@ -34,6 +35,7 @@ SDTYP=""
 USER=""
 USERGROUPS=""
 TIMEZONE=""
+URL=""
 
 # check if root
 if [ "$EUID" -ne 0 ]; then
@@ -57,6 +59,50 @@ for i in "${DEPENDENCIES[@]}"; do
 done
 
 # Functions
+cleanup() {
+  # edit boot files and fstab
+  #
+  if [[ "DEVICE" = "rpi4" ]]; then
+    echo "===> Installing default config.txt file to /boot/..."
+  fi
+}
+
+create_install() {
+  msg "Creating install for $DEVICE..."
+  info "Used device is ${SDCARD}"
+
+  # fetch and extract rootfs 
+  info "Downloading latest $ARCH rootfs..."
+  cd $TMPDIR
+  
+  URL=$(wget -q -O https://armtixlinux.org/images) | grep dinit
+  msg "Found url: $URL"
+  # wget -q --show-progress --progress=bar:firce:noscroll https://armtixlinux.org/images/armtix-dinit-20230401.tar.xz 
+}
+
+elapsed_time(){
+  echo $(echo $1 $(get_timer) | awk '{ printf "%0.2f",($2-$1)/60}')
+}
+
+dialog_fail() {
+  case $RESPONSE in
+  
+    0)
+      msg $1
+      ;;
+    1)
+      msg "Cancel pressed, exiting.."
+      ;;
+    *)
+      msg "Unkown dialog fail occured."
+      ;;
+  esac
+}
+
+get_timer(){
+  echo $(date +%s)
+}
+
 msg() {
   ALL_OFF="\e[1;0m"
   BOLD="\e[1;1m"
@@ -65,8 +111,24 @@ msg() {
   printf "${GREEN}==>${ALL_OFF}${BOLD} ${mesg}${ALL_OFF}\n" "$@" >&2
 }
 
-get_timer(){
-    echo $(date +%s)
+  prepare_card() {
+  msg "Getting $SDCARD ready with btrfs for $DEVICE..."
+
+  # umount SD card
+  umount ${SDCARD}${SDDEV}1 1> /dev/null 2>&1
+  umount ${SDCARD}${SDDEV}2 1> /dev/null 2>&1
+  # Create partitions
+  # remove previous partitions
+  for v_partition in $(parted -s $SDCARD print|awk '/^ / {print $1}')
+  do
+    parted -s $SDCARD rm ${v_partition} 1> /dev/null 2>&1
+  done
+  # Clear first 32mb
+  # dd if=/dev/zero of=$SDCARD bs=1M count=32 1> /dev/null 2>&1
+}
+
+show_elapsed_time(){ 
+  msg "Time %s: %s minutes..." "$1" "elapsed_time $2"
 }
 
 # Keymap host dialog
@@ -95,6 +157,7 @@ if [ ! -z "$KEYMAP_HOST" ]; then
   20 50 15 "${W[@]}" 3>&1 1>&2 2>&3 3>&-)
 else
   clear
+  cancel_msg
   exit 1
 fi
 
@@ -104,7 +167,8 @@ if [ ! -z "$KEYVAR_HOST" ]; then
   USER=$(dialog --clear --title "${TITLE}" \
     --inputbox "Enter the username you want: \
     (usernames must be all lowercase and first character may not be a number)" \
-  10 90 "bas" 3>&1 1>&2 2>&3 3>&-)
+  10 90 "bas" --output-fd 1)
+  RESPONSE=$?
 
   if [[ "$USER" =~ [A-Z] ]] || [[ "$USER" =~ ^[0-9] ]] || [[ "$USER" == *['!'@#\$%^\&*()_+]* ]]; then
     clear
@@ -113,16 +177,33 @@ if [ ! -z "$KEYVAR_HOST" ]; then
   fi
 else
   clear
+  dialog_fail
   exit 1
 fi
 
-#Fullname dialog
+# Additional usergroups dialog
 if [ ! -z "$USER" ]; then
-FULLNAME=$(dialog --clear --title "${TITLE}" \
-  --inputbox "Enter desired Full Name for $USER:" \
-  8 50 "Bastille Useur" 3>&1 1>&2 2>&3 3>&-)
+USERGROUPS=$(dialog --clear --title "${TITLE}" \
+  --inputbox "Enter res $RESPONSE res additional groups besides the default groups for $USER 
+in a comma seperated list: 
+(default: wheel,sys,audio,input,video,storage,lp,network,users,power)" 10 90 \
+  --output-fd 1)
+RESPONSE=$?
 else
   clear
+  dialog_fail "Configuration aborted! Username cannot be empty."  
+  exit 1
+fi
+
+# Fullname dialog
+if [ ! -z "$USERGROUPS" ]; then
+FULLNAME=$(dialog --clear --title "${TITLE}" \
+  --inputbox "Enter desired Full Name for $USER:" \
+  8 50 "Bastille Useur" --output-fd 1)
+RESPONSE=$?
+else
+  clear
+  dialog_fail
   exit 1
 fi
 
@@ -133,8 +214,9 @@ if [ ! -z "$FULLNAME" ]; then
     8 50 3>&1 1>&2 2>&3 3>&-)
   fi
 else 
-    clear
-    exit 1
+  clear
+  dialog_fail
+  exit 1
 fi
 
 if [ ! -z "$PASSWORD" ]; then
@@ -204,6 +286,7 @@ if [ ! -z "$CONFIRMROOTPASSWORD" ]; then
     DEV_NAME=$SDCARD
     SDCARD=/dev/$SDCARD
     SDTYP=${SDCARD:5:2}
+    FSTYPE="btrfs"
 else 
   clear
   exit 1
@@ -233,7 +316,6 @@ else
   clear
   exit 1
 fi
-
 
 if [ ! -z "$TIMEZONE" ]; then
   let i=0
@@ -356,20 +438,18 @@ if [ ! -z "$HOSTNAME" ]; then
   Locale = $LOCALE
   TTY Keyboard layout = $KEYMAP_CLI
   Hostname = $HOSTNAME" \
-  25 70 3>&1 1>&2 2>&3 3>&-)
+  25 70 3>&1 1>&2 2>&3 3>&-
 fi
 else
   clear
   exit 1
 fi
 
-
-
 # Commands
 timer_start=$(get_timer)
 
-# prepare_card
-# create_install
-# cleanup
-# show_elapsed_time "${FUNCNAME}" "${timer_start}"
+prepare_card
+create_install
+cleanup
+show_elapsed_time "${FUNCNAME}" "${timer_start}"
 sync
