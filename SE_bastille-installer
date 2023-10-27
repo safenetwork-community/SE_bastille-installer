@@ -18,10 +18,9 @@ CONFIRMROOTPASSWORD=""
 CRYPT=""
 DEVICE=""
 DEV_NAME=""
-EDITION=""
-FSTYPE=""
+FS_TYPE=""
 FULLNAME=""
-HOST_NAME=""
+HOSTNAME=""
 KEYMAP_CLI=""
 KEYMAP_HOST=""
 KEYVAR_HOST=""
@@ -29,9 +28,9 @@ LOCALE=""
 PASSWORD=""
 RESPONSE=""
 ROOTPASSWORD=""
-SDDEV=""
-SDCARD=""
-SDTYP=""
+SD_DEV=""
+SD_CARD=""
+SD_TYPE=""
 USER=""
 USERGROUPS=""
 TIMEZONE=""
@@ -69,11 +68,11 @@ cleanup() {
 
 create_install() {
   msg "Creating install for $DEVICE..."
-  info "Used device is ${SDCARD}"
+  info "Used device is ${SD_CARD}"
 
   # fetch and extract rootfs 
   info "Downloading latest $ARCH rootfs..."
-  cd $TMPDIR
+  cd $TMP_DIR
   
   URL=$(wget -q -O https://armtixlinux.org/images) | grep dinit
   msg "Found url: $URL"
@@ -86,15 +85,20 @@ elapsed_time(){
 
 dialog_fail() {
   case $RESPONSE in
-  
     0)
-      msg $1
+      msg "$1"
+      msg "Please restart the installer and try again."
       ;;
     1)
       msg "Cancel pressed, exiting.."
       ;;
     *)
-      msg "Unkown dialog fail occured."
+      if [ ! -z "$1" ]; then
+        msg "$1"
+      else
+        msg "Unknown error occured."
+      fi
+        msg "Please contact the administrator of this application."
       ;;
   esac
 }
@@ -112,22 +116,22 @@ msg() {
 }
 
   prepare_card() {
-  msg "Getting $SDCARD ready with btrfs for $DEVICE..."
+  msg "Getting $SD_CARD ready with btrfs for $DEVICE..."
 
   # umount SD card
-  umount ${SDCARD}${SDDEV}1 1> /dev/null 2>&1
-  umount ${SDCARD}${SDDEV}2 1> /dev/null 2>&1
+  umount ${SD_CARD}${SD_DEV}1 1> /dev/null 2>&1
+  umount ${SD_CARD}${SD_DEV}2 1> /dev/null 2>&1
   # Create partitions
   # remove previous partitions
-  for v_partition in $(parted -s $SDCARD print|awk '/^ / {print $1}')
+  for v_partition in $(parted -s $SD_CARD print|awk '/^ / {print $1}')
   do
-    parted -s $SDCARD rm ${v_partition} 1> /dev/null 2>&1
+    parted -s $SD_CARD rm ${v_partition} 1> /dev/null 2>&1
   done
   # Clear first 32mb
-  # dd if=/dev/zero of=$SDCARD bs=1M count=32 1> /dev/null 2>&1
+  # dd if=/dev/zero of=$SD_CARD bs=1M count=32 1> /dev/null 2>&1
 }
 
-show_elapsed_time(){ 
+show_elapsed_time() { 
   msg "Time %s: %s minutes..." "$1" "elapsed_time $2"
 }
 
@@ -142,6 +146,7 @@ done < <( ls /usr/share/bkeymaps )
 KEYMAP_HOST=$(dialog --clear --title "${TITLE}" \
 --menu "Choose your current keyboard layout:" \
 20 50 15 "${W[@]}" 3>&1 1>&2 2>&3 3>&-)
+RESPONSE=$?
 
 # Keymap variant dialog 
 if [ ! -z "$KEYMAP_HOST" ]; then
@@ -155,15 +160,16 @@ if [ ! -z "$KEYMAP_HOST" ]; then
   KEYVAR_HOST=$(dialog --clear --title "${TITLE}" \
     --menu "Choose your current keyboard variant:" \
   20 50 15 "${W[@]}" 3>&1 1>&2 2>&3 3>&-)
+  RESPONSE=$?
 else
   clear
-  cancel_msg
+  dialog_fail
   exit 1
 fi
 
 # Username dialog 
 if [ ! -z "$KEYVAR_HOST" ]; then
-  setup-keymap ${KEYMAP_HOST} ${KEYVAR_HOST}
+  # setup-keymap ${KEYMAP_HOST} ${KEYVAR_HOST}
   USER=$(dialog --clear --title "${TITLE}" \
     --inputbox "Enter the username you want: \
     (usernames must be all lowercase and first character may not be a number)" \
@@ -184,7 +190,7 @@ fi
 # Additional usergroups dialog
 if [ ! -z "$USER" ]; then
 USERGROUPS=$(dialog --clear --title "${TITLE}" \
-  --inputbox "Enter res $RESPONSE res additional groups besides the default groups for $USER 
+  --inputbox "Enter additional groups besides the default groups for $USER 
 in a comma seperated list: 
 (default: wheel,sys,audio,input,video,storage,lp,network,users,power)" 10 90 \
   --output-fd 1)
@@ -196,23 +202,16 @@ else
 fi
 
 # Fullname dialog
-if [ ! -z "$USERGROUPS" ]; then
 FULLNAME=$(dialog --clear --title "${TITLE}" \
   --inputbox "Enter desired Full Name for $USER:" \
-  8 50 "Bastille Useur" --output-fd 1)
+  8 50 "Useur Bastille" --output-fd 1)
 RESPONSE=$?
-else
-  clear
-  dialog_fail
-  exit 1
-fi
 
 if [ ! -z "$FULLNAME" ]; then
-  if [[ "$EDITION" != "phosh" ]]; then
-    PASSWORD=$(dialog --clear --title "${TITLE}" \
-    --insecure --passwordbox "Enter new Password for $USER:" \
-    8 50 3>&1 1>&2 2>&3 3>&-)
-  fi
+  PASSWORD=$(dialog --clear --title "${TITLE}" \
+  --insecure --passwordbox "Enter new Password for $USER:" \
+  8 50 3>&1 1>&2 2>&3 3>&-)
+  RESPONSE=$?
 else 
   clear
   dialog_fail
@@ -220,19 +219,19 @@ else
 fi
 
 if [ ! -z "$PASSWORD" ]; then
-  if [[ "$EDITION" != "phosh" ]]; then
-    CONFIRMPASSWORD=$(dialog --clear --title "${TITLE}" \
-    --insecure --passwordbox "Confirm new Password for $USER:" \
-    8 50 3>&1 1>&2 2>&3 3>&-)
-  fi
+  CONFIRMPASSWORD=$(dialog --clear --title "${TITLE}" \
+  --insecure --passwordbox "Confirm new Password for $USER:" \
+  8 50 3>&1 1>&2 2>&3 3>&-)
+  RESPONSE=$?
 else 
   clear
+  dialog_fail "Password cannot be empty."
   exit 1
 fi
 
 if [[ "$PASSWORD" != "$CONFIRMPASSWORD" ]]; then
   clear
-  msg "User passwords do not match! Please restart the installer and try again."
+  dialog_fail 0 "User passwords do not match!"
   exit 1
 fi
 
@@ -240,8 +239,10 @@ if [ ! -z "$CONFIRMPASSWORD" ]; then
   ROOTPASSWORD=$(dialog --clear --title "${TITLE}" \
   --insecure --passwordbox "Enter new Root Password:" \
   8 50 3>&1 1>&2 2>&3 3>&-)
+  RESPONSE=$?
 else 
   clear
+  dialog_fail RESPONSE "Confirmation password is empty. This error should not occur." ""
   exit 1
 fi
 
@@ -249,14 +250,17 @@ if [ ! -z "$ROOTPASSWORD" ]; then
   CONFIRMROOTPASSWORD=$(dialog --clear --title "${TITLE}" \
   --insecure --passwordbox "Confirm new Root Password:" \
   8 50 3>&1 1>&2 2>&3 3>&-)
+  RESPONSE=$?
 else 
   clear
+  dialog_fail
   exit 1
 fi
 
 if [[ "$ROOTPASSWORD" != "$CONFIRMROOTPASSWORD" ]]; then
     clear
-    msg "Root passwords do not match! Please restart the installer and try again."
+    RESPONSE=0
+    dialog_fail "Root passwords do not match!"
     exit 1
 fi
 
@@ -278,31 +282,33 @@ if [ ! -z "$CONFIRMROOTPASSWORD" ]; then
       exit 1
     fi
 
-    SDCARD=$(dialog --title "${TITLE}" \
+    SD_CARD=$(dialog --title "${TITLE}" \
     --menu "Choose your SDCard/eMMC/USB - Be sure the correct drive is selected! 
     WARNING! This WILL destroy the data on it!" \
     20 50 10 "${W[@]}" 3>&2 2>&1 1>&3)
 
-    DEV_NAME=$SDCARD
-    SDCARD=/dev/$SDCARD
-    SDTYP=${SDCARD:5:2}
-    FSTYPE="btrfs"
+    DEV_NAME=$SD_CARD
+    SD_CARD=/dev/$SD_CARD
+    SD_TYPE=${SD_CARD:5:2}
+    FS_TYPE="btrfs"
+    RESPONSE=$?
 else 
   clear
+  dialog_fail
   exit 1
 fi
 
-if [[ "$SDTYP" = "sd" ]]; then
-  SDDEV=""
-elif [[ "$SDTYP" = "mm" || "$SDTYP" = "nv" ]]; then
-  SDDEV="p"
+if [[ "$SD_TYPE" = "sd" ]]; then
+  SD_DEV=""
+elif [[ "$SD_TYPE" = "mm" || "$SD_TYPE" = "nv" ]]; then
+  SD_DEV="p"
 else 
   clear
-  echo "Unkown Block Device Type"
+  dialog_fail "Unkown Block Device Type"
   exit 1
 fi
 
-if [ ! -z "$FSTYPE" ]; then
+if [ ! -z "$DEV_NAME" ]; then
   let i=0
   W=()
   while read -r line; do
@@ -312,8 +318,10 @@ if [ ! -z "$FSTYPE" ]; then
   TIMEZONE=$(dialog --clear --title "${TITLE}" \
     --menu "Choose your timezone!" 20 50 15 \
     "${W[@]}" 3>&1 1>&2 2>&3 3>&-)
+  RESPONSE=$?
 else 
   clear
+  dialog_fail
   exit 1
 fi
 
@@ -329,6 +337,7 @@ if [ ! -z "$TIMEZONE" ]; then
   20 50 15 "${W[@]}" 3>&1 1>&2 2>&3 3>&-)
 else 
   clear
+  dialog_fail
   exit 1
 fi
 
@@ -342,86 +351,22 @@ if [ ! -z "$LOCALE" ]; then
   KEYMAP_CLI=$(dialog --clear --title "${TITLE}" \
   --menu "Choose your TTY keyboard layout:" \
   20 50 15 "${W[@]}" 3>&1 1>&2 2>&3 3>&-)
+  RESPONSE=$?
 else 
   clear
+  dialog_fail
   exit 1
-fi
-
-if [[ "$EDITION" != "minimal" ]]; then
-if [ ! -z "$KEYMAP_CLI" ]; then
-  let i=0
-  W=()
-  while read -r line; do
-    let i=$i+1
-    W+=($line "")
-  done < <( localectl list-x11-keymap-layouts )
-  X11KEYMAP=$(dialog --clear --title "${TITLE}" \
-    --menu "Choose your X11 keyboard layout:" \
-    20 50 15 "${W[@]}" 3>&1 1>&2 2>&3 3>&-)
-else 
-  clear
-  exit 1
-fi
 fi
 
 if [ ! -z "$KEYMAP_CLI" ]; then
   HOSTNAME=$(dialog --clear --title "${TITLE}" \
     --inputbox "Enter desired hostname for this system:" 8 50 \
     3>&1 1>&2 2>&3 3>&-)
-if [ ! -z "$FSTYPE" ]; then
-  let i=0
-  W=()
-  while read -r line; do
-    let i=$i+1
-    W+=($line "")
-  done < <( timedatectl list-timezones )
-  TIMEZONE=$(dialog --clear --title "${TITLE}" \
-    --menu "Choose your timezone!" \
-    20 50 15 "${W[@]}" 3>&1 1>&2 2>&3 3>&-)
+  RESPONSE=$?
 else 
   clear
+  dialog_fail
   exit 1
-fi
-
-
-if [ ! -z "$TIMEZONE" ]; then
-  let i=0
-  W=()
-  while read -r line; do
-    let i=$i+1
-    W+=($line "")
-  done < <( cat /etc/locale.gen | grep "UTF-8" | tail -n +2 | sed -e 's/^#*//' | awk '{print $1}' )
-  LOCALE=$(dialog --clear --title "${TITLE}" \
-    --menu "Choose your locale!" \
-    20 50 15 "${W[@]}" 3>&1 1>&2 2>&3 3>&-)
-else 
-  clear
-  exit 1
-fi
-
-if [ ! -z "$LOCALE" ]; then
-  let i=0
-  W=()
-  while read -r line; do
-    let i=$i+1
-    W+=($line "")
-  done < <( localectl list-keymaps )
-  KEYMAP_CLI=$(dialog --clear --title "${TITLE}" \
-    --menu "Choose your TTY keyboard layout:" 
-    20 50 15 "${W[@]}" 3>&1 1>&2 2>&3 3>&-)
-else 
-  clear
-  exit 1
-fi
-
-if [ ! -z "$KEYMAP_CLI" ]; then
-  HOSTNAME=$(dialog --clear --title "${TITLE}" \
-    --inputbox "Enter desired hostname for this system:" \
-    8 50 3>&1 1>&2 2>&3 3>&-)
-else 
-  clear
-  exit 1
-fi
 fi
 
 if [ ! -z "$HOSTNAME" ]; then
@@ -432,16 +377,16 @@ if [ ! -z "$HOSTNAME" ]; then
   Additional usergroups = $USERGROUPS
   Password for $USER = (password hidden)
   Password for root = (password hidden)
-  SDCard/eMMC/USB = $SDCARD
-  Filesystem = $FSTYPE
+  SDCard/eMMC/USB = $SD_CARD
+  Filesystem = $FS_TYPE
   Timezone = $TIMEZONE
   Locale = $LOCALE
   TTY Keyboard layout = $KEYMAP_CLI
   Hostname = $HOSTNAME" \
   25 70 3>&1 1>&2 2>&3 3>&-
-fi
 else
   clear
+  dialog_fail
   exit 1
 fi
 
