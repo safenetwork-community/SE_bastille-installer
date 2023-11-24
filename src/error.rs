@@ -15,12 +15,14 @@ impl Error {
 #[derive(Clone, Debug)]
 pub enum ErrorKind {
     BoxNotFound(),
+    EmptyMenu(),
 }
 
 impl StdError for Error {
     fn description(&self) -> &str {
         match self.kind {
             ErrorKind::BoxNotFound() => "Occurs when dialogbox can not be found.",
+            ErrorKind::EmptyMenu() => "Occurs when dialogbox has an empty menu list.",
         }
     }
 }
@@ -30,6 +32,9 @@ impl fmt::Display for Error {
         match self.kind {
             ErrorKind::BoxNotFound() => 
                 write!(f, "Unknown box selected"),
+            ErrorKind::EmptyMenu() => 
+                write!(f, "Menu box is empty"),
+
        }
     }
 }
