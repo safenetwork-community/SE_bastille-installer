@@ -16,6 +16,7 @@ impl Error {
 pub enum ErrorKind {
     BoxNotFound(),
     EmptyMenu(),
+    UnknownError(String),
 }
 
 impl StdError for Error {
@@ -23,6 +24,7 @@ impl StdError for Error {
         match self.kind {
             ErrorKind::BoxNotFound() => "Occurs when dialogbox can not be found.",
             ErrorKind::EmptyMenu() => "Occurs when dialogbox has an empty menu list.",
+            ErrorKind::UnknownError(_) => "Occurs when dialog error occurs unfamiliar to the maintainer of this application.",
         }
     }
 }
@@ -34,7 +36,8 @@ impl fmt::Display for Error {
                 write!(f, "Unknown box selected"),
             ErrorKind::EmptyMenu() => 
                 write!(f, "Menu box is empty"),
-
+            ErrorKind::UnknownError(_) => 
+                write!(f, "An unknown error has occured"),
        }
     }
 }
