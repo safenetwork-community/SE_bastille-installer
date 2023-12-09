@@ -1,13 +1,17 @@
+mod dbox;
 mod constants;
 
 use const_format::concatcp;
-use dialog::{backends::Dialog, DialogBox, Input, Menu, Password, Choice, Question};
+use dialog::{backends::Dialog, DialogBox, Input, Menu, Password, Choice};
 use regex::RegexSet;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use crate::error::Error as Error; 
 use crate::error::ErrorKind as ErrorKind; 
+use crate::forms::*;
+use crate::app::dbox::*;
+
 
 const TITRFOQ: &str = concatcp!("Èstalxr d sistêmbêstur d Bastij", " ", constants::VERSION);
 const TITLE: &str = concatcp!(constants::OS, " ", constants::VERSION);
@@ -22,40 +26,6 @@ const CLEAR: &str = "clear";
 const LABEL_BACK: &str = "Back";
 const LABEL_QUIT: &str = "Quit";
 
-// General box texts
-const TEXT_COLON: &str = ":";
-
-// Input box texts
-const TEXT_BOX_INPUT_HOSTNAME: &str = "Enter desired hostname for this system:";
-const TEXT_BOX_INPUT_FULLNAME: &str = "Enter desired Full Name for ";
-const TEXT_BOX_INPUT_USERNAME: &str = "Enter the username you want: \n\
-    (usernames must be all lowercase and first character may not be a number)"; 
-const TEXT_BOX_INPUT_USERGROUPS_1: &str = "Enter additional groups besides the default groups which are\n\
-    --> wheel,sys,audio,input,video,storage,lp,network,users,power <--\n\
-    for user \'";
-const TEXT_BOX_INPUT_USERGROUPS_3: &str = "\' in a comma seperated list:"; 
-
-// Menu box texts
-const TEXT_BOX_MENU_CONFIG: &str = "What would you like to reconfigure:";
-const TEXT_BOX_MENU_DRIVE: &str = "Choose your SDCard/eMMC/USB - Be sure the correct drive is selected!\n\
-    WARNING! This WILL destroy the data on it!";
-const TEXT_BOX_MENU_KEYMAP_GUEST: &str = "Choose your desired keyboard layout:";
-const TEXT_BOX_MENU_KEYMAP_HOST: &str = "Choose a keyboard layout for this installer:";
-const TEXT_BOX_MENU_KEYVAR_GUEST: &str = "Choose your desired keyboard variant:";
-const TEXT_BOX_MENU_KEYVAR_HOST: &str = "Choose a keyboard variant for this installer:";
-const TEXT_BOX_MENU_MAIN: &str = "What would you like to do:";
-const TEXT_BOX_MENU_TIMEZONE_REGION: &str = "Choose your timezone:";
-const TEXT_BOX_MENU_TIMEZONE_ZONE: &str = "Choose your timezone:";
-
-// Password box texts
-const TEXT_BOX_PASSWORD_USER_SGN: &str = "Enter new Password for ";
-const TEXT_BOX_PASSWORD_USER_RPT: &str = "Confirm new Password for ";
-const TEXT_BOX_PASSWORD_ROOT_SGN: &str = "Enter new Root Password:";
-const TEXT_BOX_PASSWORD_ROOT_RPT: &str = "Confirm new Root Password:";
-
-// Question box texts
-const TEXT_BOX_QUESTION_CONFIG: &str = "Is the below information correct:";
-
 // Message box texts
 const BOX_MSG_FULLNAME_EMPTY: &str = concatcp!("Fullname", constants::BOX_MSG_EMPTY);
 const BOX_MSG_HOSTNAME_EMPTY: &str = concatcp!("Hostname", constants::BOX_MSG_EMPTY);
@@ -66,25 +36,6 @@ const BOX_MSG_PASSWORD_ROOT_EMPTY: &str = concatcp!("Root password", constants::
 const BOX_MSG_PASSWORD_ROOT_NOMATCH: &str = concatcp!("Root passwords", constants::BOX_MSG_DONOTMATCH);
 const BOX_MSG_PASSWORD_USER_EMPTY: &str = concatcp!("User password", constants::BOX_MSG_EMPTY);
 const BOX_MSG_PASSWORD_USER_NOMATCH: &str = concatcp!("User passwords", constants::BOX_MSG_DONOTMATCH);
-
-// dboxes, mboxes and exits
-#[derive(Clone)]
-enum Page {
-    Drive, EmptyHostname, EmptyFullname,
-    EmptyMenu, EmptyPasswordRoot, 
-    EmptyPasswordUser, EmptyUsername,
-    Escape, Finish, Fullname, Hostname,
-    InvalidHostname, InvalidUsername,
-    KeymapGuest, KeymapHost, 
-    KeyvarGuest, KeyvarHost, NoBoxFound, 
-    NoMatchPasswordRoot, NoMatchPasswordUser,
-    MenuConfig, MenuMain,
-    PasswordUserSgn, PasswordUserRpt,
-    PasswordRootSgn, PasswordRootRpt,
-    QuestionConfig, Quit,
-    TimezoneRegion, TimezoneZone,
-    UnknownError, Usergroups, Username
-}
 
 // default lists
 const LIST_MENU_CONFIG: &[(&str, Page)] = &[
@@ -118,10 +69,6 @@ const HEIGHT_LIST_MENU: u32 = 15;
 const HEIGHT_BOX_PASSWORD: u32 = 11;
 const WIDTH_BOX_PASSWORD: u32 = 90;
 
-// Dimensions question box
-const HEIGHT_BOX_QUESTION: u32 = 20;
-const WIDTH_BOX_QUESTION: u32 = 90;
-
 // Dimensions input box
 const HEIGHT_BOX_INPUT: u32 = 11;
 const WIDTH_BOX_INPUT: u32 = 90;
@@ -149,10 +96,10 @@ const SED_FIND_DEFAULT: &str = r"s/\.\///";
 const SED_FIND_FILE_EXTENSIONS: &str = r"s/\.\/\([^\.]*\).*/\1/";
 
 // Exit texts
-const MSG_EXIT_ESCAPE: &str =   "==> Escape pressed, exiting..";
-const MSG_EXIT_QUIT: &str =     "==> Quit pressed, exiting..";
-const MSG_EXIT_FINISH: &str =   "==> Installation finished! Terminating..";
-const MSG_EXIT_CONTACT: &str =  "==> Please contact the owner of this application.";
+const MSG_EXIT_ESCAPE: &str =   "Escape pressed, exiting..";
+const MSG_EXIT_QUIT: &str =     "Quit pressed, exiting..";
+const MSG_EXIT_FINISH: &str =   "Installation finished! Terminating..";
+const MSG_EXIT_CONTACT: &str =  "Please contact the owner of this application.";
 
 // Paths
 const PATH_BKEYMAP: &str = "/usr/share/bkeymaps";  
@@ -173,7 +120,8 @@ pub struct App {
     password_user: String,
     password_root: String,
     drive: String,
-    timezone_path: PathBuf,
+    timezone_path: PathBuf, 
+    timezone_region: String,
     timezone_zone: String,
     hostname: String,
     error_msg: String,
@@ -194,15 +142,96 @@ impl App {
             password_root: String::new(),
             drive: String::new(),
             timezone_path: PathBuf::new(),
+            timezone_region: String::new(),
             timezone_zone: String::new(),
             usergroups: String::new(),
             hostname: String::new(),
             error_msg: String::new(),
         }    
     }
-     
+
+    fn display_form_mainmenu(&self) -> MainMenuForm {
+        MainMenuForm {}
+    }
+
+
+    fn display_form_username(&self) -> UsernameForm {
+        UsernameForm {}
+    }
+
+    fn display_form_usergroups(&self) -> UsergroupsForm<'_> {
+        UsergroupsForm {
+            username: &*self.username,
+        }
+    }
+
+    fn display_form_fullname(&self) -> FullnameForm<'_> {
+        FullnameForm {
+            username: &*self.username,
+        }
+    }
+
+    fn display_form_password_user_sign(&self) -> PasswordUserSignForm<'_> {
+        PasswordUserSignForm {
+            username: &*self.username,
+        }
+    }
+
+    fn display_form_password_user_repeat(&self) -> PasswordUserRepeatForm<'_> {
+        PasswordUserRepeatForm {
+            username: &*self.username,
+        }
+    }
+
+    fn display_form_password_root_sign(&self) -> PasswordRootSignForm {
+        PasswordRootSignForm {}
+    }
+
+    fn display_form_password_root_repeat(&self) -> PasswordRootRepeatForm {
+        PasswordRootRepeatForm {}
+    }
+
+    fn display_form_drive(&self) -> DriveForm {
+        DriveForm {}
+    }
+
+    fn display_form_timezone_region(&self) -> TimezoneRegionForm {
+        TimezoneRegionForm {}
+    }
+
+    fn display_form_timezone_zone(&self) -> TimezoneZoneForm {
+        TimezoneZoneForm {}
+    }
+
+    fn display_form_keymap_guest(&self) -> KeymapGuestForm {
+        KeymapGuestForm {}
+    }
+
+    fn display_form_keyvar_guest(&self) -> KeyvarGuestForm {
+        KeyvarGuestForm {}
+    }
+
+    fn display_form_hostname(&self) -> HostnameForm {
+        HostnameForm {}
+    }
+
+    fn display_form_keymap_host(&self) -> KeymapHostForm {
+        KeymapHostForm {}
+    }
+
+
+    fn display_form_keyvar_host(&self) -> KeyvarHostForm {
+        KeyvarHostForm {}
+    }
+
+
+    fn display_form_menu_config(&self) -> MenuConfigForm {
+        MenuConfigForm {}
+    }
+
     pub fn run(&mut self) -> Result<(), Error> {
         let mut current_box = Page::MenuMain;
+        let mut c_box = ConfirmationBox::new();
 
         loop {
             match current_box {
@@ -221,7 +250,7 @@ impl App {
                 Page::PasswordRootRpt => current_box = Self::handle_dbox_password_root_repeat(self),
                 Page::PasswordUserSgn => current_box = Self::handle_dbox_password_user_sign(self),
                 Page::PasswordUserRpt => current_box = Self::handle_dbox_password_user_repeat(self),
-                Page::QuestionConfig => current_box = Self::handle_dbox_question_config(self),
+                Page::QuestionConfig => current_box = c_box.handle(),
                 Page::TimezoneRegion => current_box = Self::handle_dbox_timezone_region(self),
                 Page::TimezoneZone => current_box = Self::handle_dbox_timezone_zone(self),
                 Page::Usergroups => current_box = Self::handle_dbox_usergroups(self),
@@ -242,9 +271,9 @@ impl App {
             };
         }
     }
-     
+   
     fn handle_dbox_menu_main(&mut self) -> Page {
-        match Self::menu_box(BoxTypeMenu::Main, &TEXT_BOX_MENU_MAIN, 
+        match Self::menu_box(BoxTypeMenu::Main, self.display_form_mainmenu().to_string(), 
             Self::get_list_menu(&LIST_MENU_MAIN)) {
             (Choice::Yes, Some(choice)) => {
                 Self::get_menu_choice(&LIST_MENU_MAIN, &choice)
@@ -267,8 +296,8 @@ impl App {
     fn handle_dbox_username(&mut self) -> Page {
         let mut dbox = Self::get_dbox_input();
         dbox.set_cancellabel("Back");
-        match Self::input_box(&TEXT_BOX_INPUT_USERNAME, DEFAULT_USERNAME,
-        Some(dbox)) {
+        match Self::input_box(self.display_form_username().to_string(), 
+        DEFAULT_USERNAME, Some(dbox)) {
             (Choice::Yes, Some(input_text)) => {
                 if !input_text.is_empty() {
                     if !RegexSet::new(REGEX_USERNAME).unwrap().is_match(&input_text) {
@@ -292,8 +321,7 @@ impl App {
     fn handle_dbox_usergroups(&mut self) -> Page {
         let mut dbox = Self::get_dbox_input();
         dbox.set_cancellabel("Back");
-        match Self::input_box(&[TEXT_BOX_INPUT_USERGROUPS_1, 
-            &self.username, TEXT_BOX_INPUT_USERGROUPS_3].concat(),
+        match Self::input_box(self.display_form_usergroups().to_string(), 
         EMPTY, Some(dbox)) {
             (Choice::Yes, Some(input_text)) => {
                 self.usergroups = input_text;
@@ -308,9 +336,8 @@ impl App {
     fn handle_dbox_fullname(&mut self) -> Page {
         let mut dbox = Self::get_dbox_input();
         dbox.set_cancellabel("Back");
-        match Self::input_box(&[TEXT_BOX_INPUT_FULLNAME, 
-            &self.username, TEXT_COLON].concat(), DEFAULT_FULLNAME, 
-        Some(dbox)) {
+        match Self::input_box(self.display_form_fullname().to_string(), 
+        DEFAULT_FULLNAME, Some(dbox)) {
             (Choice::Yes, Some(input_text)) => {
                 if !input_text.is_empty() {
                     self.fullname = input_text;
@@ -327,8 +354,7 @@ impl App {
     fn handle_dbox_password_user_sign(&mut self) -> Page {
         let mut dbox = Self::get_dbox_password();
         dbox.set_cancellabel("Back");
-        match Self::password_box(&[TEXT_BOX_PASSWORD_USER_SGN, 
-            &self.username, TEXT_COLON].concat(),
+        match Self::password_box(self.display_form_password_user_sign().to_string(),
         Some(dbox)) {
             (Choice::Yes, Some(password)) => {
                 if !password.is_empty() {
@@ -346,8 +372,7 @@ impl App {
     fn handle_dbox_password_user_repeat(&mut self) -> Page {
         let mut dbox = Self::get_dbox_password();
         dbox.set_cancellabel("Back");
-        match Self::password_box(&[TEXT_BOX_PASSWORD_USER_RPT, 
-            &self.username, TEXT_COLON].concat(),
+        match Self::password_box(self.display_form_password_user_repeat().to_string(), 
         Some(dbox)) {
             (Choice::Yes, Some(password)) => {
                 if self.password_user.eq(&password) {
@@ -364,7 +389,7 @@ impl App {
     fn handle_dbox_password_root_sign(&mut self) -> Page {
         let mut dbox = Self::get_dbox_password();
         dbox.set_cancellabel("Back");
-        match Self::password_box(&TEXT_BOX_PASSWORD_ROOT_SGN,
+        match Self::password_box(self.display_form_password_root_sign().to_string(),
         Some(dbox)) {
             (Choice::Yes, Some(password)) => {
                 if !password.is_empty() {
@@ -382,7 +407,7 @@ impl App {
     fn handle_dbox_password_root_repeat(&mut self) -> Page {
         let mut dbox = Self::get_dbox_password();
         dbox.set_cancellabel("Back");
-        match Self::password_box(&TEXT_BOX_PASSWORD_ROOT_RPT,
+        match Self::password_box(self.display_form_password_root_repeat().to_string(),
         Some(dbox)) {
             (Choice::Yes, Some(password)) => {
                 if self.password_user.eq(&password) {
@@ -397,7 +422,7 @@ impl App {
     }
 
     fn handle_dbox_drive(&mut self) -> Page {
-        match Self::menu_box(BoxTypeMenu::Default, &TEXT_BOX_MENU_DRIVE, 
+        match Self::menu_box(BoxTypeMenu::Default, self.display_form_drive().to_string(), 
             Self::drivelist_from_lsblk()) {
             (Choice::Yes, Some(drive)) => {
                 self.drive = drive;
@@ -411,9 +436,10 @@ impl App {
     }
 
     fn handle_dbox_timezone_region(&mut self) -> Page { 
-        match Self::menu_box(BoxTypeMenu::Default, &TEXT_BOX_MENU_TIMEZONE_REGION, 
+        match Self::menu_box(BoxTypeMenu::Default, self.display_form_timezone_region().to_string(), 
             Self::get_list_timeregion()) {
             (Choice::Yes, Some(region)) => {
+                self.timezone_region = region.clone();
                 self.timezone_path = Path::new(PATH_ZONEINFO).join(region);
                 Page::TimezoneZone
             },
@@ -427,7 +453,7 @@ impl App {
     fn handle_dbox_timezone_zone(&mut self) -> Page {
         let mut dbox = Self::get_dbox_menu();
         dbox.set_cancellabel("Back");
-        match Self::menu_box(BoxTypeMenu::Default, &TEXT_BOX_MENU_TIMEZONE_ZONE, 
+        match Self::menu_box(BoxTypeMenu::Default, self.display_form_timezone_zone().to_string(), 
             Self::get_list_timezone(self.timezone_path.as_path())) {
             (Choice::Yes, Some(zone)) => {
                 self.timezone_zone = zone;
@@ -440,7 +466,7 @@ impl App {
     }
 
     fn handle_dbox_keymap_guest(&mut self) -> Page {
-        match Self::menu_box(BoxTypeMenu::Default, &TEXT_BOX_MENU_KEYMAP_GUEST, 
+        match Self::menu_box(BoxTypeMenu::Default, self.display_form_keymap_guest().to_string(), 
             Self::get_list_keymap()) {
             (Choice::Yes, Some(keymap)) => {
                 self.keymap_guest = keymap.clone();
@@ -454,7 +480,7 @@ impl App {
     }
 
     fn handle_dbox_keyvar_guest(&mut self) -> Page {
-        match Self::menu_box(BoxTypeMenu::Default, &TEXT_BOX_MENU_KEYVAR_GUEST, 
+        match Self::menu_box(BoxTypeMenu::Default, self.display_form_keyvar_guest().to_string(), 
             Self::get_list_keyvars(self.keyvar_path.as_path())) {
             (Choice::Yes, Some(keyvar)) => {
                 self.keyvar_guest = keyvar;
@@ -469,8 +495,8 @@ impl App {
     fn handle_dbox_hostname(&mut self) -> Page {
         let mut dbox = Self::get_dbox_input();
         dbox.set_cancellabel("Back");
-        match Self::input_box(&TEXT_BOX_INPUT_HOSTNAME, DEFAULT_HOSTNAME,
-        Some(dbox)) {
+        match Self::input_box(self.display_form_hostname().to_string(), 
+        DEFAULT_HOSTNAME, Some(dbox)) {
             (Choice::Yes, Some(input_text)) => {
                 if !input_text.is_empty() {
                     if !RegexSet::new(REGEX_HOSTNAME).unwrap().is_match(&input_text) {
@@ -487,17 +513,8 @@ impl App {
         }
     }
 
-    fn handle_dbox_question_config(&mut self) -> Page {
-        match Self::question_box(&TEXT_BOX_QUESTION_CONFIG, None) {
-            Choice::Yes => Page::Finish,
-            Choice::No => Page::MenuConfig,
-            Choice::Escape => Page::Escape,
-            _ => Page::NoBoxFound,
-        }
-    }
-   
     fn handle_dbox_menu_config(&mut self) -> Page {
-        match Self::menu_box(BoxTypeMenu::Default, &TEXT_BOX_MENU_CONFIG, 
+        match Self::menu_box(BoxTypeMenu::Default, self.display_form_menu_config().to_string(), 
             Self::get_list_menu(&LIST_MENU_CONFIG)) {
             (Choice::Yes, Some(choice)) => {
                 Self::get_menu_choice(&LIST_MENU_CONFIG, &choice)
@@ -509,7 +526,7 @@ impl App {
     }
 
     fn handle_dbox_keymap_host(&mut self) -> Page {
-        match Self::menu_box(BoxTypeMenu::Default, &TEXT_BOX_MENU_KEYMAP_HOST, 
+        match Self::menu_box(BoxTypeMenu::Default, self.display_form_keymap_host().to_string(), 
             Self::get_list_keymap()) {
             (Choice::Yes, Some(keymap)) => {
                 self.keymap_host = keymap.clone();
@@ -517,13 +534,13 @@ impl App {
                 Page::KeyvarHost
             },
             (Choice::Escape, _) => Page::Escape,
-            (Choice::Cancel, _) => Page::Quit,
+            (Choice::Cancel, _) => Page::MenuMain,
             _ => Page::NoBoxFound,
         }
     }
 
     fn handle_dbox_keyvar_host(&mut self) -> Page {
-        match Self::menu_box(BoxTypeMenu::Default, &TEXT_BOX_MENU_KEYVAR_HOST, 
+        match Self::menu_box(BoxTypeMenu::Default, self.display_form_keyvar_host().to_string(), 
             Self::get_list_keyvars(self.keyvar_path.as_path())) {
             (Choice::Yes, Some(keyvar)) => {
                 self.keyvar_host = keyvar;
@@ -558,7 +575,7 @@ impl App {
     }
  
     // Input box
-    fn input_box(text: &str, default: &str, dbox: Option<Dialog>) -> (Choice, Option<String>) {
+    fn input_box(text: String, default: &str, dbox: Option<Dialog>) -> (Choice, Option<String>) {
         match dbox {
             Some(ibox) => Input::new(text).default(default).show_with(&ibox).expect(EXP_DBOX),
             None => Input::new(text).default(default).show_with(Self::get_dbox_input()).expect(EXP_DBOX),
@@ -574,7 +591,7 @@ impl App {
         dialog
     }
 
-    fn password_box(text: &str, dbox: Option<Dialog>) -> (Choice, Option<String>) {
+    fn password_box(text: String, dbox: Option<Dialog>) -> (Choice, Option<String>) {
         match dbox {
             Some(pbox) => Password::new(text).show_with(&pbox).expect(EXP_DBOX),
             None => Password::new(text).show_with(Self::get_dbox_password()).expect(EXP_DBOX),
@@ -591,23 +608,7 @@ impl App {
         dialog
     }
 
-    fn question_box(text: &str, dbox: Option<Dialog>) -> Choice {
-        match dbox {
-            Some(qbox) => Question::new(text).show_with(&qbox).expect(EXP_DBOX),
-            None => Question::new(text).show_with(Self::get_dbox_question()).expect(EXP_DBOX),
-        }
-    }
-
-    fn get_dbox_question() -> Dialog {
-        let mut dialog = Dialog::new();
-        dialog.set_backtitle(TITRFOQ);
-        dialog.set_title(TITLE);
-        dialog.set_width(WIDTH_BOX_QUESTION);
-        dialog.set_height(HEIGHT_BOX_QUESTION);
-        dialog
-    }
-
-    fn menu_box(box_type: BoxTypeMenu, text: &str, list: Vec<[String; 2]>) -> (Choice, Option<String>) { 
+    fn menu_box(box_type: BoxTypeMenu, text: String, list: Vec<[String; 2]>) -> (Choice, Option<String>) { 
         let dbox = match box_type {
             BoxTypeMenu::Main => Self::get_dbox_menu_main(),
             _ => Self::get_dbox_menu(),
