@@ -1,7 +1,8 @@
+mod r#box;
 mod dbox;
+mod mbox;
 mod constants;
 
-use const_format::concatcp;
 use dialog::{backends::Dialog, DialogBox, Input, Menu, Password, Choice};
 use regex::RegexSet;
 use std::path::{Path, PathBuf};
@@ -10,32 +11,15 @@ use std::process::{Command, Stdio};
 use crate::error::Error as Error; 
 use crate::error::ErrorKind as ErrorKind; 
 use crate::forms::*;
+use crate::app::r#box::Page;
 use crate::app::dbox::*;
+use crate::app::mbox::*;
+use crate::app::constants::*;
 
-
-const TITRFOQ: &str = concatcp!("Èstalxr d sistêmbêstur d Bastij", " ", constants::VERSION);
-const TITLE: &str = concatcp!(constants::OS, " ", constants::VERSION);
-
-// General empty string
-const EMPTY: &str = "";
-
-// General box options
-const CLEAR: &str = "clear";
-
-// General box labels
-const LABEL_BACK: &str = "Back";
-const LABEL_QUIT: &str = "Quit";
-
-// Message box texts
-const BOX_MSG_FULLNAME_EMPTY: &str = concatcp!("Fullname", constants::BOX_MSG_EMPTY);
-const BOX_MSG_HOSTNAME_EMPTY: &str = concatcp!("Hostname", constants::BOX_MSG_EMPTY);
-const BOX_MSG_HOSTNAME_INVALID: &str = concatcp!("Hostname", constants::BOX_MSG_INVALID);
-const BOX_MSG_USERNAME_EMPTY: &str = concatcp!("Username", constants::BOX_MSG_EMPTY);
-const BOX_MSG_USERNAME_INVALID: &str = concatcp!("Username", constants::BOX_MSG_INVALID);
-const BOX_MSG_PASSWORD_ROOT_EMPTY: &str = concatcp!("Root password", constants::BOX_MSG_EMPTY);
-const BOX_MSG_PASSWORD_ROOT_NOMATCH: &str = concatcp!("Root passwords", constants::BOX_MSG_DONOTMATCH);
-const BOX_MSG_PASSWORD_USER_EMPTY: &str = concatcp!("User password", constants::BOX_MSG_EMPTY);
-const BOX_MSG_PASSWORD_USER_NOMATCH: &str = concatcp!("User passwords", constants::BOX_MSG_DONOTMATCH);
+// Types of boxes
+enum BoxTypeMenu {
+    Default, Main
+}
 
 // default lists
 const LIST_MENU_CONFIG: &[(&str, Page)] = &[
@@ -55,58 +39,12 @@ const LIST_MENU_MAIN: &[(&str, Page)] = &[
     ("Quit", Page::Quit)
 ];
 
-// Types of boxes
-enum BoxTypeMenu {
-    Default, Main
-}
-
-// Dimensions Menu box
-const HEIGHT_BOX_MENU: u32 = 20;
-const WIDTH_BOX_MENU: u32 = 50;
-const HEIGHT_LIST_MENU: u32 = 15;
-
-// Dimensions password box
-const HEIGHT_BOX_PASSWORD: u32 = 11;
-const WIDTH_BOX_PASSWORD: u32 = 90;
-
-// Dimensions input box
-const HEIGHT_BOX_INPUT: u32 = 11;
-const WIDTH_BOX_INPUT: u32 = 90;
-
-// Input defaults
-const DEFAULT_FULLNAME: &str = "Useur Bastille";
-const DEFAULT_HOSTNAME: &str = "reseau-sur";
-const DEFAULT_USERNAME: &str = "bas";
-
-// Unexpected error messages
-const EXP_MBOX: &str = "Could not display message box.";
-const EXP_DBOX: &str = "Could not display dialog box.";
-
-// general regex
-const REGEX_HOSTNAME: [&str; 3] = [r"[A-Z]", r"[0-9]", r"[!@#\$%^\&*()_+/\\]"];
-const REGEX_USERNAME: [&str; 3] = [r"[A-Z]", r"[0-9]", r"[!@#\$%^\&*()_+/\\]"];
-
-// find regex
-const REGEX_FIND_DIRS_ALL: [&str; 6] = [".","-regex",r"\.\/[^\.].*","-prune","-type","d"];
-const REGEX_FIND_DIRS_CAP: [&str; 6] = [".","-regex",r"\.\/[A-Z].*","-prune","-type","d"];
-const REGEX_FIND_FILES: [&str; 6] = [".","-regex",r"\.\/[^\.].*","-prune","-type","f"];
-
-// sed regex
-const SED_FIND_DEFAULT: &str = r"s/\.\///";
-const SED_FIND_FILE_EXTENSIONS: &str = r"s/\.\/\([^\.]*\).*/\1/";
-
 // Exit texts
-const MSG_EXIT_ESCAPE: &str =   "Escape pressed, exiting..";
-const MSG_EXIT_QUIT: &str =     "Quit pressed, exiting..";
-const MSG_EXIT_FINISH: &str =   "Installation finished! Terminating..";
-const MSG_EXIT_CONTACT: &str =  "Please contact the owner of this application.";
+pub const MSG_EXIT_ESCAPE: &str =   "Escape pressed, exiting..";
+pub const MSG_EXIT_QUIT: &str =     "Quit pressed, exiting..";
+pub const MSG_EXIT_FINISH: &str =   "Installation finished! Terminating..";
+pub const MSG_EXIT_CONTACT: &str =  "Please contact the owner of this application.";
 
-// Paths
-const PATH_BKEYMAP: &str = "/usr/share/bkeymaps";  
-const PATH_ZONEINFO: &str = "/usr/share/zoneinfo";  
-
-// Errors
-const ERROR_EMPTY_MENU: &str = "\nExpected at least 20 tokens for --men, have 4.\nUse --help to list options.\n\n\n";
 
 pub struct App {
     username: String,
@@ -229,9 +167,22 @@ impl App {
         MenuConfigForm {}
     }
 
+    fn get_confirmation_box(&self) -> ConfirmationBox {
+        ConfirmationBox {
+            username: &*self.username,
+            fullname: &*self.fullname,
+            usergroups: &*self.usergroups,
+            drive: &*self.drive, 
+            timezone_region: &*self.timezone_region,
+            timezone_zone: &*self.timezone_zone,
+            keymap: &*self.keymap_guest,
+            keyvar: &*self.keyvar_guest,
+            hostname: &*self.hostname,
+        }
+    }
+
     pub fn run(&mut self) -> Result<(), Error> {
         let mut current_box = Page::MenuMain;
-        let mut c_box = ConfirmationBox::new();
 
         loop {
             match current_box {
@@ -250,20 +201,20 @@ impl App {
                 Page::PasswordRootRpt => current_box = Self::handle_dbox_password_root_repeat(self),
                 Page::PasswordUserSgn => current_box = Self::handle_dbox_password_user_sign(self),
                 Page::PasswordUserRpt => current_box = Self::handle_dbox_password_user_repeat(self),
-                Page::QuestionConfig => current_box = c_box.handle(),
+                Page::QuestionConfig => current_box = Self::get_confirmation_box(self).handle(),
                 Page::TimezoneRegion => current_box = Self::handle_dbox_timezone_region(self),
                 Page::TimezoneZone => current_box = Self::handle_dbox_timezone_zone(self),
                 Page::Usergroups => current_box = Self::handle_dbox_usergroups(self),
                 Page::Username => current_box = Self::handle_dbox_username(self),            
-                Page::EmptyFullname => current_box = Self::message_box(40, 10, BOX_MSG_FULLNAME_EMPTY, Page::Fullname),
-                Page::EmptyHostname => current_box = Self::message_box(40, 10, BOX_MSG_HOSTNAME_EMPTY, Page::Hostname),
-                Page::EmptyPasswordRoot => current_box = Self::message_box(40, 10, BOX_MSG_PASSWORD_ROOT_EMPTY, Page::PasswordRootSgn),
-                Page::EmptyPasswordUser => current_box = Self::message_box(40, 10, BOX_MSG_PASSWORD_USER_EMPTY, Page::PasswordUserSgn),
-                Page::EmptyUsername => current_box = Self::message_box(40, 10, BOX_MSG_USERNAME_EMPTY, Page::Username),
-                Page::InvalidHostname => current_box = Self::message_box(40, 10, BOX_MSG_HOSTNAME_INVALID, Page::Hostname),
-                Page::InvalidUsername => current_box = Self::message_box(40, 10, BOX_MSG_USERNAME_INVALID, Page::Username),
-                Page::NoMatchPasswordRoot => current_box = Self::message_box(40, 10, BOX_MSG_PASSWORD_ROOT_NOMATCH, Page::PasswordRootSgn),
-                Page::NoMatchPasswordUser => current_box = Self::message_box(40, 10, BOX_MSG_PASSWORD_USER_NOMATCH, Page::PasswordUserSgn),
+                Page::EmptyFullname => current_box = MBOX_EMPTY_FULLNAME.handle(), 
+                Page::EmptyHostname => current_box = MBOX_EMPTY_HOSTNAME.handle(), 
+                Page::EmptyPasswordRoot => current_box = MBOX_EMPTY_PASSWORD_ROOT.handle(),  
+                Page::EmptyPasswordUser => current_box = MBOX_EMPTY_PASSWORD_USER.handle(), 
+                Page::EmptyUsername => current_box = MBOX_EMPTY_USERNAME.handle(),
+                Page::InvalidHostname => current_box = MBOX_INVALID_HOSTNAME.handle(),
+                Page::InvalidUsername => current_box = MBOX_INVALID_USERNAME.handle(), 
+                Page::NoMatchPasswordRoot => current_box = MBOX_NOMATCH_PASSWORD_ROOT.handle(),
+                Page::NoMatchPasswordUser => current_box = MBOX_NOMATCH_PASSWORD_USER.handle(),
                 Page::EmptyMenu => return Self::empty_menu(),
                 Page::UnknownError => return Self::unknown_error(self),
                 Page::Finish => return Self::finish(self),
@@ -562,18 +513,6 @@ impl App {
         .expect("Failed to execute setup-keymap command.");
     }
 
-    // message_box
-    fn message_box(width: u32, height: u32, text :&str, return_box :Page) -> Page {
-        let mut dbox = Dialog::new();
-        dbox.set_backtitle(TITRFOQ);
-        dbox.set_width(width);
-        dbox.set_height(height);
-        dialog::Message::new(text)
-            .show_with(&dbox)
-            .expect(EXP_MBOX);
-        return_box
-    }
- 
     // Input box
     fn input_box(text: String, default: &str, dbox: Option<Dialog>) -> (Choice, Option<String>) {
         match dbox {
