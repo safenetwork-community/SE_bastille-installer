@@ -1,30 +1,30 @@
 use std::fmt;
 
-/*
-pub struct MainMenuText {       
+
+pub struct TextMenuMain {       
 }
 
-impl fmt::Display for MainMenuText {
+impl fmt::Display for TextMenuMain {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
         writeln!(f, "What would you like to do")
     }
 }
 
-pub struct UsernameText {       
+pub struct TextInputUsername {       
 }
 
-impl fmt::Display for UsernameText {
+impl fmt::Display for TextInputUsername {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
         writeln!(f, "Enter the username you want:")?;
         writeln!(f, "(usernames must be all lowercase and first character may not be a number)")
     }
 }
 
-pub struct UsergroupsText<'a> {       
+pub struct TextInputUsergroups<'a> {       
     pub username: &'a str,
 }
 
-impl fmt::Display for UsergroupsText<'_> {
+impl fmt::Display for TextInputUsergroups<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { 
         writeln!(f, "Enter additional groups besides the default groups which are")?;
         writeln!(f, "--> wheel,sys,audio,input,video,storage,lp,network,users,power <--")?;
@@ -32,110 +32,110 @@ impl fmt::Display for UsergroupsText<'_> {
     }
 }
 
-pub struct FullnameText<'a> {       
+pub struct TextInputFullname<'a> {       
     pub username: &'a str,
 }
 
-impl fmt::Display for FullnameText<'_> {
+impl fmt::Display for TextInputFullname<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { 
         writeln!(f, "Enter desired full name for {}:", self.username)
     }
 }
 
-pub struct PasswordUserSignText<'a> {       
+pub struct TextPasswordUserSgn<'a> {       
     pub username: &'a str,
 }
 
-impl fmt::Display for PasswordUserSignText<'_> {
+impl fmt::Display for TextPasswordUserSgn<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { 
         writeln!(f, "Enter new password for {}:", self.username)
     }
 }
 
-pub struct PasswordUserRepeatText<'a> {      
+pub struct TextPasswordUserRpt<'a> {      
     pub username: &'a str,
 }
 
-impl fmt::Display for PasswordUserRepeatText<'_> {
+impl fmt::Display for TextPasswordUserRpt<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { 
         writeln!(f, "Confirm password for {}:", self.username)
     }
 }
 
-pub struct PasswordRootSignText {        
+pub struct TextPasswordRootSgn {        
 }
 
-impl fmt::Display for PasswordRootSignText {
+impl fmt::Display for TextPasswordRootSgn {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
         writeln!(f, "Enter new root password:")
     }
 }
 
-pub struct PasswordRootRepeatText {
+pub struct TextPasswordRootRpt {
 }
 
-impl fmt::Display for PasswordRootRepeatText {
+impl fmt::Display for TextPasswordRootRpt {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
         writeln!(f, "Confirm new root password:")
     }
 }
 
-pub struct DriveText {
+pub struct TextMenuDrive {
 }
 
-impl fmt::Display for DriveText {
+impl fmt::Display for TextMenuDrive {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
         writeln!(f, "Choose your SDCard/eMMC/USB - Be sure the correct drive is selected!")?;
         writeln!(f, "WARNING! This WILL destroy the data on it!")
     }
 }
 
-pub struct KeymapGuestText {
+pub struct TextMenuKeymapGuest {
 }
 
-impl fmt::Display for KeymapGuestText {
+impl fmt::Display for TextMenuKeymapGuest {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
         writeln!(f, "Choose your desired keyboard layout:")
     }
 }
 
-pub struct KeyvarGuestText {
+pub struct TextMenuKeyvarGuest {
 }
 
-impl fmt::Display for KeyvarGuestText {
+impl fmt::Display for TextMenuKeyvarGuest {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
         writeln!(f, "Choose your desired keyboard variant:")
     }
 }
 
-pub struct TimezoneRegionText {
+pub struct TextMenuTimezoneRegion {
 }
 
-impl fmt::Display for TimezoneRegionText {
+impl fmt::Display for TextMenuTimezoneRegion {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
         writeln!(f, "Choose your timezone region:")
     }
 }
 
-pub struct TimezoneZoneText {
+pub struct TextMenuTimezoneZone {
 }
 
-impl fmt::Display for TimezoneZoneText {
+impl fmt::Display for TextMenuTimezoneZone {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
         writeln!(f, "Choose your timezone:")
     }
 }
 
-pub struct HostnameText {
+pub struct TextInputHostname {
 }
 
-impl fmt::Display for HostnameText {
+impl fmt::Display for TextInputHostname {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
         writeln!(f, "Enter desired hostname for this system:")
     }
 }
-*/
-pub struct ConfirmationText<'a> {
+
+pub struct TextQuestionConfirmation<'a> {
     pub username: &'a str,
     pub fullname: &'a str,
     pub usergroups: &'a str,
@@ -148,7 +148,7 @@ pub struct ConfirmationText<'a> {
 }
 
 
-impl fmt::Display for ConfirmationText<'_> {
+impl fmt::Display for TextQuestionConfirmation<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Is the below informate correct:")?;
         writeln!(f, "Username: {}", self.username)?;
@@ -162,32 +162,32 @@ impl fmt::Display for ConfirmationText<'_> {
         writeln!(f, "Hostname = {}", self.hostname)
     }
 }
-/*
-pub struct KeymapHostText {
+
+pub struct TextMenuKeymapHost {
 }
 
-impl fmt::Display for KeymapHostText {
+impl fmt::Display for TextMenuKeymapHost {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
         writeln!(f, "Choose a keyboard layout for this installer:")
     }
 }
 
-pub struct KeyvarHostText {
+pub struct TextMenuKeyvarHost {
 }
 
-impl fmt::Display for KeyvarHostText {
+impl fmt::Display for TextMenuKeyvarHost {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
         writeln!(f, "Choose a keyboard variant for this installer:")
     }
 }
 
 
-pub struct MenuConfigText {
+pub struct TextMenuConfig {
 }
 
-impl fmt::Display for MenuConfigText {
+impl fmt::Display for TextMenuConfig {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
         writeln!(f, "What would you like to reconfigure:")
     }
 }
-*/
+
