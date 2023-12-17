@@ -1,18 +1,19 @@
 // dboxes, mboxes and exits
 #[derive(Clone)]
 pub enum Page {
-    Drive, EmptyHostname, EmptyFullname,
+    EmptyHostname, EmptyFullname,
     EmptyMenu, EmptyPasswordRoot, 
     EmptyPasswordUser, EmptyUsername,
-    Escape, Finish, Fullname, Hostname,
+    Escape, Finish, 
+    InputFullname, InputHostname,
+    InputUsergroups, InputUsername,
     InvalidHostname, InvalidUsername,
-    KeymapGuest, KeymapHost, 
-    KeyvarGuest, KeyvarHost, NoBoxFound, 
-    NoMatchPasswordRoot, NoMatchPasswordUser,
-    MenuConfig, MenuMain,
+    MenuConfig, MenuDrive, 
+    MenuKeymapGuest, MenuKeymapHost, 
+    MenuKeyvarGuest, MenuKeyvarHost, 
+    MenuMain, 
+    MenuTimezoneRegion, MenuTimezoneZone,
+    NoBoxFound, NoMatchPasswordRoot, NoMatchPasswordUser,
     PasswordUserSgn, PasswordUserRpt,
     PasswordRootSgn, PasswordRootRpt,
-    QuestionConfig, Quit,
-    TimezoneRegion, TimezoneZone,
-    UnknownError, Usergroups, Username
-}
+    QuestionConfig, Quit, UnknownError, }

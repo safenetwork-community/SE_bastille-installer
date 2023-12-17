@@ -17,20 +17,21 @@ pub const PATH_BKEYMAP: &str = "/usr/share/bkeymaps";
 pub const PATH_ZONEINFO: &str = "/usr/share/zoneinfo";  
 
 pub const LIST_MENU_MAIN: &[(&str, Page)] = &[
-    ("Start installation", Page::Username), 
-    ("Change keyboard layout", Page::KeymapHost),
+    ("Start installation", Page::InputUsername), 
+    ("Change keyboard layout", Page::MenuKeymapHost),
     ("Quit", Page::Quit)
 ];
 
 pub const LIST_MENU_CONFIG: &[(&str, Page)] = &[
-    ("enter username", Page::Username),
-    ("enter usergroups", Page::Usergroups),
-    ("enter fullname", Page::Fullname),
+    ("enter username", Page::InputUsername),
+    ("enter usergroups", Page::InputUsergroups),
+    ("enter fullname", Page::InputFullname),
     ("set password of user", Page::PasswordUserSgn),
     ("set password of root", Page::PasswordRootSgn),
-    ("select drive", Page::Drive),
-    ("select timezone", Page::TimezoneRegion),
-    ("enter hostname", Page::Hostname)
+    ("select drive", Page::MenuDrive),
+    ("select timezone", Page::MenuTimezoneRegion),
+    ("select keyboard layout", Page::MenuKeymapGuest),
+    ("enter hostname", Page::InputHostname)
 ];
 
 pub struct ListFromCommand {}

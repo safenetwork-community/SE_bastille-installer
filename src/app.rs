@@ -10,7 +10,7 @@ use crate::error::Error as Error;
 use crate::error::ErrorKind as ErrorKind; 
 use crate::app::r#box::Page;
 use crate::app::dbox::*;
-use crate::app::dbox::r#type::PageHandler;
+use crate::app::dbox::r#type::BoxHandler;
 use crate::app::mbox::*;
 
 // General box options
@@ -38,6 +38,7 @@ pub struct App {
     timezone_region: String,
     timezone_zone: String,
     hostname: String,
+    single_edit: bool,
     error_msg: String,
 }
 
@@ -60,105 +61,119 @@ impl App {
             timezone_zone: String::new(),
             usergroups: String::new(),
             hostname: String::new(),
+            single_edit: false,
             error_msg: String::new(),
         }    
     }
 
-    fn get_box_menu_main(&self) -> BoxMenuMain {
+    fn get_box_menu_main(&mut self) -> BoxMenuMain<'_> {
         BoxMenuMain {
-            error_msg: (&*self.error_msg).to_string(),
+            error_msg: &mut self.error_msg,
         }
     }
 
 
-    fn get_box_input_username(&self) -> BoxInputUsername {
+    fn get_box_input_username(&mut self) -> BoxInputUsername<'_> {
         BoxInputUsername {
-            username: (&*self.username).to_string(),
+            single_edit: self.single_edit,
+            username: &mut self.username,
         }
     }
 
-    fn get_box_input_usergroups(&self) -> BoxInputUsergroups<'_> {
+    fn get_box_input_usergroups(&mut self) -> BoxInputUsergroups<'_> {
         BoxInputUsergroups {
+            single_edit: self.single_edit,
             username: &*self.username,
-            usergroups: (&*self.usergroups).to_string(),
+            usergroups: &mut self.usergroups,
         }
     }
 
-    fn get_box_input_fullname(&self) -> BoxInputFullname<'_> {
+    fn get_box_input_fullname(&mut self) -> BoxInputFullname<'_> {
         BoxInputFullname {
+            single_edit: self.single_edit,
             username: &*self.username,
-            fullname: (&*self.fullname).to_string(),
+            fullname: &mut self.fullname,
         }
     }
 
-    fn get_box_password_user_sign(&self) -> BoxPasswordUserSgn<'_> {
+    fn get_box_password_user_sign(&mut self) -> BoxPasswordUserSgn<'_> {
         BoxPasswordUserSgn {
+            single_edit: self.single_edit,
             username: &*self.username,
-            password_user: (&*self.password_user).to_string(),
+            password_user: &mut self.password_user,
         }
     }
 
     fn get_box_password_user_repeat(&self) -> BoxPasswordUserRpt<'_> {
         BoxPasswordUserRpt {
+            single_edit: self.single_edit,
             username: &*self.username,
             password_user: &*self.password_user,
         }
     }
 
-    fn get_box_password_root_sign(&self) -> BoxPasswordRootSgn {
+    fn get_box_password_root_sign(&mut self) -> BoxPasswordRootSgn {
         BoxPasswordRootSgn {
-            password_root: (&*self.password_root).to_string(),
+            single_edit: self.single_edit,
+            password_root: &mut self.password_root,
         }
     }
 
     fn get_box_password_root_repeat(&self) -> BoxPasswordRootRpt {
         BoxPasswordRootRpt {
+            single_edit: self.single_edit,
             password_root: &*self.password_root,
         }
     }
 
-    fn get_box_menu_drive(&self) -> BoxMenuDrive {
+    fn get_box_menu_drive(&mut self) -> BoxMenuDrive {
         BoxMenuDrive {
-            drive: (&*self.drive).to_string(),
+            drive: &mut self.drive,
+            single_edit: self.single_edit,
         }
     }
 
-    fn get_box_menu_timezone_region(&self) -> BoxMenuTimezoneRegion {
+    fn get_box_menu_timezone_region(&mut self) -> BoxMenuTimezoneRegion {
         BoxMenuTimezoneRegion {
-            region: (&*self.timezone_region).to_string(),
-            pathbuf: (&*self.timezone_path).to_path_buf(),
+            single_edit: self.single_edit,
+            region: &mut self.timezone_region,
+            pathbuf: &mut self.timezone_path,
         }
     }
 
-    fn get_box_menu_timezone_zone(&self) -> BoxMenuTimezoneZone<'_>  {
+    fn get_box_menu_timezone_zone(&mut self) -> BoxMenuTimezoneZone<'_>  {
         BoxMenuTimezoneZone {
-            zone: (&*self.timezone_zone).to_string(),
+            single_edit: self.single_edit,
+            zone: &mut self.timezone_zone,
             path: &*self.timezone_path,
         }
     }
 
-    fn get_box_menu_keymap_guest(&self) -> BoxMenuKeymapGuest {
+    fn get_box_menu_keymap_guest(&mut self) -> BoxMenuKeymapGuest {
         BoxMenuKeymapGuest {
-            keymap: (&*self.keymap_guest).to_string(),
-            pathbuf: (&*self.keyvar_path).to_path_buf(),
+            single_edit: self.single_edit,
+            keymap: &mut self.keymap_guest,
+            pathbuf: &mut self.keyvar_path,
         }
     }
 
-    fn get_box_menu_keyvar_guest(&self) -> BoxMenuKeyvarGuest<'_>  {
+    fn get_box_menu_keyvar_guest(&mut self) -> BoxMenuKeyvarGuest<'_>  {
         BoxMenuKeyvarGuest {
-            keyvar: (&*self.keyvar_guest).to_string(),
+            single_edit: self.single_edit,
+            keyvar: &mut self.keyvar_guest,
             path: &*self.keyvar_path,
         }
     }
 
-    fn get_box_input_hostname(&self) -> BoxInputHostname {
+    fn get_box_input_hostname(&mut self) -> BoxInputHostname {
         BoxInputHostname {
-            hostname: (&*self.hostname).to_string(), 
+            single_edit: self.single_edit,
+            hostname: &mut self.hostname, 
         }
     }
  
-    fn get_box_question_confirmation(&self) -> BoxQuestionConfirmation {
-        BoxQuestionConfirmation {
+    fn get_box_question_config(&self) -> BoxQuestionConfig {
+        BoxQuestionConfig {
             username: &*self.username,
             fullname: &*self.fullname,
             usergroups: &*self.usergroups,
@@ -171,21 +186,23 @@ impl App {
         }
     }
 
-    fn get_box_menu_config(&self) -> BoxMenuConfig {
-        BoxMenuConfig {}
-    }
-
-    fn get_box_menu_keymap_host(&self) -> BoxMenuKeymapHost {
-        BoxMenuKeymapHost {
-            keymap: (&*self.keymap_host).to_string(),
-            pathbuf: (&*self.keyvar_path).to_path_buf(),
+    fn get_box_menu_config(&mut self) -> BoxMenuConfig {
+        BoxMenuConfig {
+            single_edit: &mut self.single_edit,
         }
     }
 
-    fn get_box_menu_keyvar_host(&self) -> BoxMenuKeyvarHost<'_>  {
+    fn get_box_menu_keymap_host(&mut self) -> BoxMenuKeymapHost<'_> {
+        BoxMenuKeymapHost {
+            keymap: &mut self.keymap_host,
+            pathbuf: &mut self.keyvar_path,
+        }
+    }
+
+    fn get_box_menu_keyvar_host(&mut self) -> BoxMenuKeyvarHost<'_>  {
         BoxMenuKeyvarHost {
             keymap: &*self.keymap_host,
-            keyvar: (&*self.keyvar_host).to_string(),
+            keyvar: &mut self.keyvar_host,
             path: &*self.keyvar_path,
         }
     }
@@ -196,38 +213,38 @@ impl App {
 
         loop {
             match current_box {
-                Page::MenuConfig => current_box = Self::get_box_menu_config(self).handle(),
-                Page::MenuMain => current_box = Self::get_box_menu_main(self).handle(),
-                Page::Quit => return Self::quit(self),
                 Page::Escape => return Self::escape(self),
-                Page::Drive => current_box = Self::get_box_menu_drive(self).handle(),
-                Page::Fullname => current_box = Self::get_box_input_fullname(self).handle(),
-                Page::Hostname => current_box = Self::get_box_input_hostname(self).handle(),
-                Page::KeymapGuest => current_box = Self::get_box_menu_keymap_guest(self).handle(),
-                Page::KeymapHost => current_box = Self::get_box_menu_keymap_host(self).handle(),
-                Page::KeyvarGuest => current_box = Self::get_box_menu_keyvar_guest(self).handle(),
-                Page::KeyvarHost => current_box = Self::get_box_menu_keyvar_host(self).handle(),
-                Page::PasswordRootSgn => current_box = Self::get_box_password_root_sign(self).handle(),
-                Page::PasswordRootRpt => current_box = Self::get_box_password_root_repeat(self).handle(),
-                Page::PasswordUserSgn => current_box = Self::get_box_password_user_sign(self).handle(),
-                Page::PasswordUserRpt => current_box = Self::get_box_password_user_repeat(self).handle(),
-                Page::QuestionConfig => current_box = Self::get_box_question_confirmation(self).handle(),
-                Page::TimezoneRegion => current_box = Self::get_box_menu_timezone_region(self).handle(),
-                Page::TimezoneZone => current_box = Self::get_box_menu_timezone_zone(self).handle(),
-                Page::Usergroups => current_box = Self::get_box_input_usergroups(self).handle(),
-                Page::Username => current_box = Self::get_box_input_username(self).handle(),            
+                Page::EmptyMenu => return Self::empty_menu(),
                 Page::EmptyFullname => current_box = MBOX_EMPTY_FULLNAME.handle(), 
                 Page::EmptyHostname => current_box = MBOX_EMPTY_HOSTNAME.handle(), 
                 Page::EmptyPasswordRoot => current_box = MBOX_EMPTY_PASSWORD_ROOT.handle(),  
                 Page::EmptyPasswordUser => current_box = MBOX_EMPTY_PASSWORD_USER.handle(), 
                 Page::EmptyUsername => current_box = MBOX_EMPTY_USERNAME.handle(),
+                Page::Finish => return Self::finish(self),
+                Page::InputFullname => current_box = Self::get_box_input_fullname(self).handle(),
+                Page::InputHostname => current_box = Self::get_box_input_hostname(self).handle(),
+                Page::InputUsergroups => current_box = Self::get_box_input_usergroups(self).handle(),
+                Page::InputUsername => current_box = Self::get_box_input_username(self).handle(),            
                 Page::InvalidHostname => current_box = MBOX_INVALID_HOSTNAME.handle(),
                 Page::InvalidUsername => current_box = MBOX_INVALID_USERNAME.handle(), 
+                Page::MenuConfig => current_box = Self::get_box_menu_config(self).handle(),
+                Page::MenuDrive => current_box = Self::get_box_menu_drive(self).handle(),
+                Page::MenuMain => current_box = Self::get_box_menu_main(self).handle(),
+                Page::MenuKeymapGuest => current_box = Self::get_box_menu_keymap_guest(self).handle(),
+                Page::MenuKeymapHost => current_box = Self::get_box_menu_keymap_host(self).handle(),
+                Page::MenuKeyvarGuest => current_box = Self::get_box_menu_keyvar_guest(self).handle(),
+                Page::MenuKeyvarHost => current_box = Self::get_box_menu_keyvar_host(self).handle(),
+                Page::MenuTimezoneRegion => current_box = Self::get_box_menu_timezone_region(self).handle(),
+                Page::MenuTimezoneZone => current_box = Self::get_box_menu_timezone_zone(self).handle(),
                 Page::NoMatchPasswordRoot => current_box = MBOX_NOMATCH_PASSWORD_ROOT.handle(),
                 Page::NoMatchPasswordUser => current_box = MBOX_NOMATCH_PASSWORD_USER.handle(),
-                Page::EmptyMenu => return Self::empty_menu(),
+                Page::PasswordRootSgn => current_box = Self::get_box_password_root_sign(self).handle(),
+                Page::PasswordRootRpt => current_box = Self::get_box_password_root_repeat(self).handle(),
+                Page::PasswordUserSgn => current_box = Self::get_box_password_user_sign(self).handle(),
+                Page::PasswordUserRpt => current_box = Self::get_box_password_user_repeat(self).handle(),
+                Page::QuestionConfig => current_box = Self::get_box_question_config(self).handle(),
+                Page::Quit => return Self::quit(self),
                 Page::UnknownError => return Self::unknown_error(self),
-                Page::Finish => return Self::finish(self),
                 _ => return Self::box_not_found(),
             };
         }

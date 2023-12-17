@@ -51,9 +51,14 @@ pub trait Default {
     fn get_box_default() -> Dialog; 
 }
 
-pub trait PageHandler {
+pub trait BoxHandler {
     fn get_text(&self) -> String; 
     fn handle(&mut self) -> Page; 
+}
+
+pub trait PageHandler {
+    fn next(&self) -> Page; 
+    fn previous(&self) -> Page; 
 }
 
 pub struct BoxMenu {}

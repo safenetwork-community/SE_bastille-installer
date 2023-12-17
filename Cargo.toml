@@ -9,7 +9,8 @@ authors = ["Folât Pjêrsômêj"]
 [dependencies]
 const_format = "0.2"
 dialog = { git = "https://github.com/safenetwork-community/dialog-rs.git" }
-regex = "1.10.2"
+env_logger = "0.10"
+regex = "1.10"
 thiserror = "1.0"
 
 [profile.release]

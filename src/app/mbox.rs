@@ -63,7 +63,7 @@ pub const MBOX_EMPTY_FULLNAME: MessageBox = MessageBox {
         vartype: FULLNAME,
         errortype: ERR_EMPTY,
     }, 
-    page: Page::Fullname,
+    page: Page::InputFullname,
 };
 
 pub const MBOX_EMPTY_HOSTNAME: MessageBox = MessageBox {
@@ -73,7 +73,7 @@ pub const MBOX_EMPTY_HOSTNAME: MessageBox = MessageBox {
         vartype: HOSTNAME,
         errortype: ERR_EMPTY,
     }, 
-    page: Page::Hostname,
+    page: Page::InputHostname,
 };
 
 pub const MBOX_EMPTY_PASSWORD_ROOT: MessageBox = MessageBox {
@@ -103,7 +103,7 @@ pub const MBOX_EMPTY_USERNAME: MessageBox = MessageBox {
         vartype: USERNAME,
         errortype: ERR_EMPTY,
     }, 
-    page: Page::Username,
+    page: Page::InputUsername,
 }; 
 
 pub const MBOX_INVALID_HOSTNAME: MessageBox = MessageBox {
@@ -113,7 +113,7 @@ pub const MBOX_INVALID_HOSTNAME: MessageBox = MessageBox {
         vartype: HOSTNAME,
         errortype: ERR_INVALID,
     }, 
-    page: Page::Hostname,
+    page: Page::InputHostname,
 }; 
 
 pub const MBOX_INVALID_USERNAME: MessageBox = MessageBox {
@@ -123,7 +123,7 @@ pub const MBOX_INVALID_USERNAME: MessageBox = MessageBox {
         vartype: USERNAME,
         errortype: ERR_INVALID,
     }, 
-    page: Page::Username,
+    page: Page::InputUsername,
 }; 
 
 pub const MBOX_NOMATCH_PASSWORD_ROOT: MessageBox = MessageBox {

@@ -135,7 +135,7 @@ impl fmt::Display for TextInputHostname {
     }
 }
 
-pub struct TextQuestionConfirmation<'a> {
+pub struct TextQuestionConfig<'a> {
     pub username: &'a str,
     pub fullname: &'a str,
     pub usergroups: &'a str,
@@ -148,7 +148,7 @@ pub struct TextQuestionConfirmation<'a> {
 }
 
 
-impl fmt::Display for TextQuestionConfirmation<'_> {
+impl fmt::Display for TextQuestionConfig<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Is the below informate correct:")?;
         writeln!(f, "Username: {}", self.username)?;
