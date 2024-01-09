@@ -1,147 +1,147 @@
 use std::fmt;
 
 use crate::app::constants::*;
-use crate::app::r#box::Page;
+use crate::app::dbox::r#type::Page;
 
 use dialog::{backends::Dialog, DialogBox};
 
-// Message box dimensions 
+// Error box dimensions 
 const DEFAULT_WIDTH: u32 = 40;
 const DEFAULT_HEIGHT: u32 = 10;
 
-// Message box var names
+// Error box var names
 const FULLNAME: &str = "Fullname";
 const USERNAME: &str = "Username";
 const HOSTNAME: &str = "Hostname";
 const PASSWORD_ROOT: &str = "Root password";
 const PASSWORD_USER: &str = "User password";
 
-// Message box error text
+// Error box error text
 const ERR_EMPTY: &str = " cannot be empty";
 const ERR_INVALID: &str = " contains invalid characters";
 const ERR_NOMATCH: &str = " do not match!";
 
-// Massage box unwrap failure text 
-const EXP_MBOX: &str = "Could not display message box.";
+// Error box unwrap failure text 
+const EXP_EBOX: &str = "Could not display message box.";
 
-pub struct MessageBox<'a> {
+pub struct BoxError<'a> {
     width: u32,
     height: u32,
-    text: MboxText<'a>,
+    text: EboxText<'a>,
     page: Page,
 }
 
-impl MessageBox<'_> {
+impl BoxError<'_> {
     pub fn handle(&self) -> Page {
-        let mut dbox = Dialog::new();
-        dbox.set_backtitle(TITRFOQ);
-        dbox.set_width(self.width);
-        dbox.set_height(self.height);
+        let dbox = Dialog::new()
+        .set_backtitle(TITRFOQ)
+        .set_width(self.width)
+        .set_height(self.height);
         dialog::Message::new(self.text.to_string())
             .show_with(&dbox)
-            .expect(EXP_MBOX);
+            .expect(EXP_EBOX);
         self.page.clone()
     }
 }
 
-pub struct MboxText<'a> {
+pub struct EboxText<'a> {
     vartype: &'a str,
     errortype: &'a str,
 }
 
-impl fmt::Display for MboxText<'_> {
+impl fmt::Display for EboxText<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
         writeln!(f, "{} {}", self.vartype, self.errortype)?;
         writeln!(f, "\n\t\t\tPlease try again")
     }
 }
 
-pub const MBOX_EMPTY_FULLNAME: MessageBox = MessageBox {
+pub const EBOX_EMPTY_FULLNAME: BoxError = BoxError {
     width: DEFAULT_WIDTH, 
     height: DEFAULT_HEIGHT, 
-    text: MboxText{
+    text: EboxText{
         vartype: FULLNAME,
         errortype: ERR_EMPTY,
     }, 
     page: Page::InputFullname,
 };
 
-pub const MBOX_EMPTY_HOSTNAME: MessageBox = MessageBox {
+pub const EBOX_EMPTY_HOSTNAME: BoxError = BoxError {
     width: DEFAULT_WIDTH, 
     height: DEFAULT_HEIGHT, 
-    text: MboxText{
+    text: EboxText{
         vartype: HOSTNAME,
         errortype: ERR_EMPTY,
     }, 
     page: Page::InputHostname,
 };
 
-pub const MBOX_EMPTY_PASSWORD_ROOT: MessageBox = MessageBox {
+pub const EBOX_EMPTY_PASSWORD_ROOT: BoxError = BoxError {
     width: DEFAULT_WIDTH, 
     height: DEFAULT_HEIGHT, 
-    text: MboxText{
+    text: EboxText{
         vartype: PASSWORD_ROOT,
         errortype: ERR_EMPTY,
     }, 
     page: Page::PasswordRootSgn,
 };
 
-pub const MBOX_EMPTY_PASSWORD_USER: MessageBox = MessageBox {
+pub const EBOX_EMPTY_PASSWORD_USER: BoxError = BoxError {
     width: DEFAULT_WIDTH, 
     height: DEFAULT_HEIGHT, 
-    text: MboxText{
+    text: EboxText{
         vartype: PASSWORD_USER,
         errortype: ERR_EMPTY,
     }, 
     page: Page::PasswordUserSgn,
 }; 
 
-pub const MBOX_EMPTY_USERNAME: MessageBox = MessageBox {
+pub const EBOX_EMPTY_USERNAME: BoxError = BoxError {
     width: DEFAULT_WIDTH, 
     height: DEFAULT_HEIGHT, 
-    text: MboxText{
+    text: EboxText{
         vartype: USERNAME,
         errortype: ERR_EMPTY,
     }, 
     page: Page::InputUsername,
 }; 
 
-pub const MBOX_INVALID_HOSTNAME: MessageBox = MessageBox {
+pub const EBOX_INVALID_HOSTNAME: BoxError = BoxError {
     width: DEFAULT_WIDTH, 
     height: DEFAULT_HEIGHT, 
-    text: MboxText{
+    text: EboxText{
         vartype: HOSTNAME,
         errortype: ERR_INVALID,
     }, 
     page: Page::InputHostname,
 }; 
 
-pub const MBOX_INVALID_USERNAME: MessageBox = MessageBox {
+pub const EBOX_INVALID_USERNAME: BoxError = BoxError {
     width: DEFAULT_WIDTH, 
     height: DEFAULT_HEIGHT, 
-    text: MboxText{
+    text: EboxText{
         vartype: USERNAME,
         errortype: ERR_INVALID,
     }, 
     page: Page::InputUsername,
 }; 
 
-pub const MBOX_NOMATCH_PASSWORD_ROOT: MessageBox = MessageBox {
+pub const EBOX_NOMATCH_PASSWORD_ROOT: BoxError = BoxError {
     width: DEFAULT_WIDTH, 
     height: DEFAULT_HEIGHT, 
-    text: MboxText{
+    text: EboxText{
         vartype: PASSWORD_ROOT,
         errortype: ERR_NOMATCH,
     }, 
     page: Page::PasswordRootSgn,
 }; 
 
-pub const MBOX_NOMATCH_PASSWORD_USER: MessageBox = MessageBox {
+pub const EBOX_NOMATCH_PASSWORD_USER: BoxError = BoxError {
     width: DEFAULT_WIDTH, 
     height: DEFAULT_HEIGHT, 
-    text: MboxText{
+    text: EboxText{
         vartype: PASSWORD_USER,
         errortype: ERR_NOMATCH,
     }, 
     page: Page::PasswordUserSgn,
-}; 
+};

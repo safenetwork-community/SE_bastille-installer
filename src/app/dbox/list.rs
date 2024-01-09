@@ -1,7 +1,10 @@
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-use crate::app::r#box::Page;
+use crate::app::dbox::r#type::Page;
+
+// general
+const EMPTY: &str = "";
 
 // find regex
 pub const REGEX_FIND_DIRS_ALL: [&str; 6] = [".","-regex",r"\.\/[^\.].*","-prune","-type","d"];
@@ -16,13 +19,24 @@ pub const SED_FIND_FILE_EXTENSIONS: &str = r"s/\.\/\([^\.]*\).*/\1/";
 pub const PATH_BKEYMAP: &str = "/usr/share/bkeymaps";  
 pub const PATH_ZONEINFO: &str = "/usr/share/zoneinfo";  
 
+pub const LIST_MENU_DEVICE: &[[&str; 2]] = &[
+    ["Raspberry Pi 4", EMPTY], 
+];
+
+pub const LIST_MENU_OS: &[[&str; 2]] = &[
+    ["Artix", EMPTY], 
+];
+
 pub const LIST_MENU_MAIN: &[(&str, Page)] = &[
-    ("Start installation", Page::InputUsername), 
+    ("Start installation", Page::MenuDevice), 
     ("Change keyboard layout", Page::MenuKeymapHost),
+    ("Test", Page::GaugeInstallation),
     ("Quit", Page::Quit)
 ];
 
 pub const LIST_MENU_CONFIG: &[(&str, Page)] = &[
+    ("select device", Page::MenuDevice),
+    ("select Operating System", Page::MenuOperatingSystem),
     ("enter username", Page::InputUsername),
     ("enter usergroups", Page::InputUsergroups),
     ("enter fullname", Page::InputFullname),

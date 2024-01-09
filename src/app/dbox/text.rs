@@ -1,5 +1,15 @@
 use std::fmt;
 
+pub struct TextGaugeInstallation<'a> {    
+    pub functions: &'a [(); 4],
+}
+
+impl fmt::Display for TextGaugeInstallation<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "{:?}", self.functions)?;
+        writeln!(f, "Progress..")
+    }
+}
 
 pub struct TextMenuMain {       
 }
@@ -7,6 +17,24 @@ pub struct TextMenuMain {
 impl fmt::Display for TextMenuMain {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
         writeln!(f, "What would you like to do")
+    }
+}
+
+pub struct TextMenuDevice {       
+}
+
+impl fmt::Display for TextMenuDevice {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
+        writeln!(f, "Choose a device you want to install SE Bastille on:")
+    }
+}
+
+pub struct TextMenuOperatingSystem {       
+}
+
+impl fmt::Display for TextMenuOperatingSystem {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
+        writeln!(f, "Choose an OS you want to installl SE Bastille on:")
     }
 }
 
