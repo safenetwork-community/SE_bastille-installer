@@ -1,7 +1,7 @@
 use std::fmt;
 
-use crate::app::constants::*;
 use crate::app::dbox::r#type::Page;
+use crate::shared::constants::dbox::TITRFOQ;
 
 use dialog::{backends::Dialog, DialogBox};
 
@@ -38,7 +38,7 @@ impl BoxError<'_> {
         .set_width(self.width)
         .set_height(self.height);
         dialog::Message::new(self.text.to_string())
-            .show_with(&dbox)
+            .show_with(dbox)
             .expect(EXP_EBOX);
         self.page.clone()
     }

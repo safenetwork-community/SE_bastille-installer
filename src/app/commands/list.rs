@@ -1,10 +1,13 @@
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::str;
+
+use const_format::str_split;
 
 use crate::app::dbox::r#type::Page;
-
-// general
-const EMPTY: &str = "";
+use crate::shared::constants::char::SPACE;
+use crate::shared::constants::command::{ARG_C, LSBLK, SH};
+use crate::shared::constants::string::EMPTY;
 
 // find regex
 pub const REGEX_FIND_DIRS_ALL: [&str; 6] = [".","-regex",r"\.\/[^\.].*","-prune","-type","d"];
@@ -19,6 +22,21 @@ pub const SED_FIND_FILE_EXTENSIONS: &str = r"s/\.\/\([^\.]*\).*/\1/";
 pub const PATH_BKEYMAP: &str = "/usr/share/bkeymaps";  
 pub const PATH_ZONEINFO: &str = "/usr/share/zoneinfo";  
 
+// Arguments
+const ARG_MOUNTED_PARTITIONS: &str = "-no name,mountpoints -lp";
+const ARG_LIST_DRIVES: &str = "-dn -o NAME";
+const ARGS_LIST_DRIVES: [&str; 3] = str_split!(ARG_LIST_DRIVES, SPACE);
+
+// General programs
+const FIND: &str = "find";
+const SED: &str = "sed";
+
+// general error messages
+const ERR_FAILED_EXECUTE_LSBLK: &str = "Failed to execute lsblk";
+const ERR_FAILED_EXECUTE_FIND: &str = "Failed to execute find";
+const ERR_FAILED_EXECUTE_SED: &str = "Failed to execute sed";
+const ERR_FAILED_WAIT_SED: &str = "Failed to wait on sed process";
+
 pub const LIST_MENU_DEVICE: &[[&str; 2]] = &[
     ["Raspberry Pi 4", EMPTY], 
 ];
@@ -28,9 +46,11 @@ pub const LIST_MENU_OS: &[[&str; 2]] = &[
 ];
 
 pub const LIST_MENU_MAIN: &[(&str, Page)] = &[
-    ("Start installation", Page::MenuDevice), 
+    ("Wizard Config", Page::MenuDevice), 
+    ("Manual Config", Page::MenuConfig), 
     ("Change keyboard layout", Page::MenuKeymapHost),
-    ("Test", Page::GaugeInstallation),
+    ("Start install", Page::GaugeInstallation),
+    ("Test", Page::GaugeTestInstallation),
     ("Quit", Page::Quit)
 ];
 
@@ -52,18 +72,17 @@ pub struct ListFromCommand {}
 
 impl ListFromCommand {
     pub fn drives() -> Vec<[String; 2]> {
-        let args: [&str; 3] = ["-dn","-o", "NAME"];
-        let ls_output = Command::new("lsblk")
-        .args(args)
+        let output_command = Command::new(LSBLK)
+        .args(ARGS_LIST_DRIVES)
         .output()
-        .expect(format!("Failed to execute lsblk {:?}", args).as_str());
+        .unwrap_or_else(|e| panic!("{}{}\n{}", ERR_FAILED_EXECUTE_LSBLK, ARG_LIST_DRIVES, e));
  
         let mut list: Vec<[String; 2]> = Vec::new(); 
-        let output = String::from_utf8_lossy(&ls_output.stdout);
-        for line in output.lines() {
+        let stdout_command = String::from_utf8_lossy(&output_command.stdout);
+        for line in stdout_command.lines() {
            list.push([String::from(line),String::new()]); 
         } 
-        return list
+        list
     }
 
     pub fn keyvars(path: &Path) -> Vec<[String; 2]> {
@@ -74,6 +93,29 @@ impl ListFromCommand {
     pub fn keymap() -> Vec<[String; 2]> {
         Self::find(Path::new(PATH_BKEYMAP), 
             REGEX_FIND_DIRS_ALL.to_vec(), SED_FIND_DEFAULT)
+    }
+
+    pub fn mounted_partitions(drive: &str) -> Vec<String> {
+        let command_sh = format!(r#"{} {} /dev/{}?"#, LSBLK, ARG_MOUNTED_PARTITIONS, drive);
+        let output_command = Command::new(SH)
+            .arg(ARG_C)
+            .arg(command_sh.clone())
+            .output()
+            .unwrap_or_else(|e| panic!("{}{}\n{}", ERR_FAILED_EXECUTE_LSBLK, command_sh, e));
+        
+        let mut list: Vec<String> = Vec::new(); 
+        let stdout_command = String::from_utf8_lossy(&output_command.stdout);
+        
+        for line in stdout_command.lines() {
+            let split: Vec<&str> = line.split_whitespace().collect();
+            
+            match split.len() {
+                0 => panic!("Mounted partition has no name."),
+                1 => continue,
+                _ => list.push(String::from(split[0])),
+            }
+        }
+        list
     }
        
     pub fn timeregion() -> Vec<[String; 2]> {
@@ -87,23 +129,23 @@ impl ListFromCommand {
     }
 
     pub fn find(path: &Path, regex_find: Vec<&str>, regex_sed: &str) -> Vec<[String; 2]> {
-        let process_find = Command::new("find")
+        let process_find = Command::new(FIND)
         .current_dir(path.to_str().unwrap())
         .args(regex_find)
         .stdout(Stdio::piped())
         .spawn()
-        .expect(format!("Failed to execute find {}", path.display()).as_str());
+        .unwrap_or_else(|_| panic!("{} {}", ERR_FAILED_EXECUTE_FIND, path.display()));
 
-        let process_sed = Command::new("sed")
+        let process_sed = Command::new(SED)
         .arg(regex_sed)
         .stdin(Stdio::from(process_find.stdout.unwrap()))
         .stdout(Stdio::piped())
         .spawn()
-        .expect(format!("Failed to execute sed {}", path.display()).as_str());
+        .unwrap_or_else(|_| panic!("{} {}", ERR_FAILED_EXECUTE_SED, path.display()));
 
         let output = process_sed
             .wait_with_output()
-            .expect("Failed to wait on sed process");        
+            .expect(ERR_FAILED_WAIT_SED);        
 
         let output_string = String::from_utf8_lossy(&output.stdout);
         let mut dirs: Vec<[String; 2]> = Vec::new(); 

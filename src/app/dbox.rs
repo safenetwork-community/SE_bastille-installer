@@ -1,47 +1,50 @@
-pub mod command;
-mod list;
 mod text;
 pub mod ebox;
 pub mod r#type;
 
-use dialog::{backends::Dialog};
-
+use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::time::Duration;
+use std::thread::sleep;
 
-use dialog::Choice;
+use dialog::{backends::Dialog, Choice};
 use regex::RegexSet;
 
-use crate::app::dbox::command::*;
-use crate::app::dbox::list::*;
+
+use crate::app::commands::execute::CommandExecute;
+use crate::app::commands::list::*;
 use crate::app::dbox::text::*;
 use crate::app::dbox::r#type::*;
 
-use crate::app::constants::{TITLE, TITRFOQ};
+use crate::shared::constants::dbox::*;
+use crate::shared::constants::string::EMPTY;
+
 
 pub struct BoxMenuMain<'a> {
-    pub error_msg: &'a mut String,
+    pub msg_error: &'a mut String,
 }
 
 impl HandlerBox for BoxMenuMain<'_> {
 
     fn handle(&mut self) -> Page {
         match BoxMenu::choice(BoxTypeMenu::Main, self.get_text(), 
-            BoxMenu::convert_page_list_to_dbox_list(&LIST_MENU_MAIN)) {
+            BoxMenu::convert_page_list_to_dbox_list(LIST_MENU_MAIN)) {
             (Choice::Yes, Some(choice)) => {
-                BoxMenu::get_page_from_selection_menu(&LIST_MENU_MAIN, &choice)
+                BoxMenu::get_page_from_selection_menu(LIST_MENU_MAIN, &choice)
             },
             (Choice::Escape, Some(msg_txt)) => {
                 match msg_txt.as_str() {
                     EMPTY => Page::Escape,
                     ERROR_EMPTY_MENU => Page::EmptyMenu,
                     _ => {
-                        *self.error_msg = msg_txt;
-                        Page::UnknownError
+                        *self.msg_error = msg_txt;
+                        Page::ErrorUnknown
                     },
                 }
             },
             (Choice::Cancel, _) => Page::Quit,
-            _ => Page::NoBoxFound, 
+            _ => Page::NotFoundBox, 
         }
     }
 
@@ -51,7 +54,7 @@ impl HandlerBox for BoxMenuMain<'_> {
 }
 
 pub struct BoxMenuDevice<'a> {
-    pub device: &'a mut String,
+    pub name_device: &'a mut String,
     pub single_edit: bool,
 }
 
@@ -59,15 +62,15 @@ impl HandlerBox for BoxMenuDevice<'_> {
 
     fn handle(&mut self) -> Page {
         match BoxMenu::choice(BoxTypeMenu::Default, self.get_text(),  
-            BoxMenu::convert_string_list_to_dbox_list(&LIST_MENU_DEVICE)) {
+            BoxMenu::convert_string_list_to_dbox_list(LIST_MENU_DEVICE)) {
             (Choice::Yes, Some(device)) => {
-                *self.device = device;
+                *self.name_device = device;
                 self.next()
             },
             (Choice::Yes, None) => Page::EmptyMenu,
             (Choice::Escape, _) => Page::Escape,
             (Choice::Cancel, _) => self.previous(),
-            _ => Page::NoBoxFound,
+            _ => Page::NotFoundBox,
         }
     }
      
@@ -94,7 +97,7 @@ impl HandlerPage for BoxMenuDevice<'_> {
 }
 
 pub struct BoxMenuOperatingSystem<'a> {
-    pub os: &'a mut String,
+    pub name_os: &'a mut String,
     pub single_edit: bool,
 }
 
@@ -103,15 +106,15 @@ impl HandlerBox for BoxMenuOperatingSystem<'_> {
 
     fn handle(&mut self) -> Page {
         match BoxMenu::choice(BoxTypeMenu::Default, self.get_text(), 
-            BoxMenu::convert_string_list_to_dbox_list(&LIST_MENU_OS)) {
+            BoxMenu::convert_string_list_to_dbox_list(LIST_MENU_OS)) {
             (Choice::Yes, Some(os)) => {
-                *self.os = os;
+                *self.name_os = os;
                 self.next()
             },
             (Choice::Yes, None) => Page::EmptyMenu,
             (Choice::Escape, _) => Page::Escape,
             (Choice::Cancel, _) => self.previous(),
-            _ => Page::NoBoxFound,
+            _ => Page::NotFoundBox,
         }
     }
      
@@ -140,7 +143,7 @@ impl HandlerPage for BoxMenuOperatingSystem<'_> {
 
 
 pub struct BoxMenuDrive<'a> {
-    pub drive: &'a mut String,
+    pub name_drive: &'a mut String,
     pub single_edit: bool,
 }
 
@@ -150,13 +153,13 @@ impl HandlerBox for BoxMenuDrive<'_> {
         match BoxMenu::choice(BoxTypeMenu::Default, self.get_text(), 
             ListFromCommand::drives()) {
             (Choice::Yes, Some(drive)) => {
-                *self.drive = drive;
+                *self.name_drive = drive;
                 self.next()
             },
             (Choice::Yes, None) => Page::EmptyMenu,
             (Choice::Escape, _) => Page::Escape,
             (Choice::Cancel, _) => self.previous(),
-            _ => Page::NoBoxFound,
+            _ => Page::NotFoundBox,
         }
     }
      
@@ -185,7 +188,7 @@ impl HandlerPage for BoxMenuDrive<'_> {
 
 
 pub struct BoxInputUsername<'a> {
-    pub username: &'a mut String,
+    pub name_user: &'a mut String,
     pub single_edit: bool,
 }
 
@@ -198,7 +201,7 @@ impl HandlerBox for BoxInputUsername<'_> {
             (Choice::Yes, Some(input_text)) => {
                 if !input_text.is_empty() {
                     if !RegexSet::new(REGEX_USERNAME).unwrap().is_match(&input_text) {
-                        *self.username = input_text;
+                        *self.name_user = input_text;
                         self.next()                 
                     }
                     else { 
@@ -211,7 +214,7 @@ impl HandlerBox for BoxInputUsername<'_> {
             },
             (Choice::Escape, _) => Page::Escape,
             (Choice::Cancel, _) => self.previous(),
-            _ => Page::NoBoxFound,
+            _ => Page::NotFoundBox,
         }
     }
 
@@ -238,8 +241,8 @@ impl HandlerPage for BoxInputUsername<'_> {
 }  
 
 pub struct BoxInputUsergroups<'a> {
-    pub username: &'a str,
-    pub usergroups: &'a mut String,
+    pub name_user: &'a str,
+    pub groups_user: &'a mut String,
     pub single_edit: bool,
 }
 
@@ -249,18 +252,18 @@ impl HandlerBox for BoxInputUsergroups<'_> {
         .set_cancellabel("Back");
         match BoxInput::choice(self.get_text(), EMPTY, Some(dbox)) {
             (Choice::Yes, Some(input_text)) => {
-                *self.usergroups = input_text;
+                *self.groups_user = input_text;
                 self.next()
             },
             (Choice::Escape, _) => Page::Escape,
             (Choice::Cancel, _) => self.previous(),
-            _ => Page::NoBoxFound,
+            _ => Page::NotFoundBox,
         }
     }
  
     fn get_text(&self) -> String {
         TextInputUsergroups { 
-            username: &*self.username,
+            username: self.name_user,
         }.to_string()
     }
 }
@@ -283,8 +286,8 @@ impl HandlerPage for BoxInputUsergroups<'_> {
 }
 
 pub struct BoxInputFullname<'a> {
-    pub username: &'a str,
-    pub fullname: &'a mut String,
+    pub name_user: &'a str,
+    pub name_full: &'a mut String,
     pub single_edit: bool,
 }
 
@@ -295,20 +298,20 @@ impl HandlerBox for BoxInputFullname<'_> {
         match BoxInput::choice(self.get_text(), DEFAULT_FULLNAME, Some(dbox)) {
             (Choice::Yes, Some(input_text)) => {
                 if !input_text.is_empty() {
-                    *self.fullname = input_text;
+                    *self.name_full = input_text;
                     self.next()
                 }
                 else { Page::EmptyFullname }
             },
             (Choice::Escape, _) => Page::Escape,
             (Choice::Cancel, _) => self.previous(),
-            _ => Page::NoBoxFound,
+            _ => Page::NotFoundBox,
         }
     }
  
     fn get_text(&self) -> String {
         TextInputFullname {
-            username: &*self.username,
+            username: self.name_user,
         }.to_string()
     }
 }
@@ -331,7 +334,7 @@ impl HandlerPage for BoxInputFullname<'_> {
 }
 
 pub struct BoxPasswordUserSgn<'a> {
-    pub username: &'a str,
+    pub name_user: &'a str,
     pub password_user: &'a mut String,
     pub single_edit: bool,
 }
@@ -350,14 +353,14 @@ impl HandlerBox for BoxPasswordUserSgn<'_> {
             },
             (Choice::Escape, _) => Page::Escape,
             (Choice::Cancel, _) => self.previous(),
-            _ => Page::NoBoxFound,
+            _ => Page::NotFoundBox,
         }
 
     }
     
     fn get_text(&self) -> String {
         TextPasswordUserSgn {
-            username: &*self.username,
+            username: self.name_user,
         }.to_string()
     }
 }
@@ -377,7 +380,7 @@ impl HandlerPage for BoxPasswordUserSgn<'_> {
 }
 
 pub struct BoxPasswordUserRpt<'a> {
-    pub username: &'a str,
+    pub name_user: &'a str,
     pub password_user: &'a str,
     pub single_edit: bool,
 }
@@ -395,13 +398,13 @@ impl HandlerBox for BoxPasswordUserRpt<'_> {
             },
             (Choice::Escape, _) => Page::Escape,
             (Choice::Cancel, _) => self.previous(),
-            _ => Page::NoBoxFound,
+            _ => Page::NotFoundBox,
         }
     }
   
     fn get_text(&self) -> String {
         TextPasswordUserRpt {
-            username: &*self.username,
+            username: self.name_user,
         }.to_string()
     }
 }
@@ -442,7 +445,7 @@ impl HandlerBox for BoxPasswordRootSgn<'_> {
             },
             (Choice::Escape, _) => Page::Escape,
             (Choice::Cancel, _) => self.previous(),
-            _ => Page::NoBoxFound,
+            _ => Page::NotFoundBox,
         }
     }
   
@@ -483,7 +486,7 @@ impl HandlerBox for BoxPasswordRootRpt<'_>  {
             },
             (Choice::Escape, _) => Page::Escape,
             (Choice::Cancel, _) => self.previous(),
-            _ => Page::NoBoxFound,
+            _ => Page::NotFoundBox,
         }
     }
   
@@ -526,7 +529,7 @@ impl HandlerBox for BoxMenuTimezoneRegion<'_> {
             },
             (Choice::Escape, _) => Page::Escape,
             (Choice::Cancel, _) => self.previous(),
-            _ => Page::NoBoxFound,
+            _ => Page::NotFoundBox,
         }
 
     }
@@ -566,7 +569,7 @@ impl HandlerBox for BoxMenuTimezoneZone<'_>  {
             },
             (Choice::Escape, _) => Page::Escape,
             (Choice::Cancel, _) => self.previous(),
-            _ => Page::NoBoxFound,
+            _ => Page::NotFoundBox,
         }
     }
      
@@ -593,7 +596,7 @@ impl HandlerPage for BoxMenuTimezoneZone<'_> {
 }
 
 pub struct BoxMenuKeymapGuest<'a> {
-    pub keymap: &'a mut String,
+    pub map_key: &'a mut String,
     pub pathbuf: &'a mut PathBuf,
     pub single_edit: bool,
 }
@@ -602,14 +605,14 @@ impl HandlerBox for BoxMenuKeymapGuest<'_> {
  fn handle(&mut self) -> Page {
     match BoxMenu::choice(BoxTypeMenu::Default, self.get_text(), 
             ListFromCommand::keymap()) {
-            (Choice::Yes, Some(keymap)) => {
-                *self.keymap = keymap.clone();
-                *self.pathbuf = Path::new(PATH_BKEYMAP).join(keymap);
+            (Choice::Yes, Some(map_key)) => {
+                *self.map_key = map_key.clone();
+                *self.pathbuf = Path::new(PATH_BKEYMAP).join(map_key);
                 self.next()
             },
             (Choice::Escape, _) => Page::Escape,
             (Choice::Cancel, _) => self.previous(),
-            _ => Page::NoBoxFound,
+            _ => Page::NotFoundBox,
         }
 
     }
@@ -634,7 +637,7 @@ impl HandlerPage for BoxMenuKeymapGuest<'_> {
 }
 
 pub struct BoxMenuKeyvarGuest<'a>  {
-    pub keyvar: &'a mut String,
+    pub var_key: &'a mut String,
     pub path: &'a Path,
     pub single_edit: bool,
 }
@@ -643,13 +646,13 @@ impl HandlerBox for BoxMenuKeyvarGuest<'_>  {
     fn handle(&mut self) -> Page {
         match BoxMenu::choice(BoxTypeMenu::Default, self.get_text(), 
             ListFromCommand::keyvars(self.path)) {
-            (Choice::Yes, Some(keyvar)) => {
-                *self.keyvar = keyvar;
+            (Choice::Yes, Some(var_key)) => {
+                *self.var_key = var_key;
                 self.next()
             },
             (Choice::Escape, _) => Page::Escape,
             (Choice::Cancel, _) => self.previous(),
-            _ => Page::NoBoxFound,
+            _ => Page::NotFoundBox,
         }
 
     }
@@ -677,7 +680,7 @@ impl HandlerPage for BoxMenuKeyvarGuest<'_> {
 }
 
 pub struct BoxInputHostname<'a> {
-    pub hostname: &'a mut String,
+    pub name_host: &'a mut String,
     pub single_edit: bool,
 }
 
@@ -690,7 +693,7 @@ impl HandlerBox for BoxInputHostname<'_> {
             (Choice::Yes, Some(input_text)) => {
                 if !input_text.is_empty() {
                     if !RegexSet::new(REGEX_HOSTNAME).unwrap().is_match(&input_text) {
-                        *self.hostname = input_text;
+                        *self.name_host = input_text;
                         self.next()
                     }
                     else { Page::InvalidHostname }
@@ -699,7 +702,7 @@ impl HandlerBox for BoxInputHostname<'_> {
             },
             (Choice::Escape, _) => Page::Escape,
             (Choice::Cancel, _) => self.previous(),
-            _ => Page::NoBoxFound,
+            _ => Page::NotFoundBox,
         }
 
     }
@@ -727,15 +730,15 @@ impl HandlerPage for BoxInputHostname<'_> {
 }
 
 pub struct BoxQuestionConfig<'a> {
-    pub username: &'a str,
-    pub fullname: &'a str,
-    pub usergroups: &'a str,
-    pub drive: &'a str,
-    pub timezone_region: &'a str,
-    pub timezone_zone: &'a str,
-    pub keymap: &'a str,
-    pub keyvar: &'a str,
-    pub hostname: &'a str,
+    pub groups_user: &'a str,
+    pub map_key: &'a str,
+    pub name_drive: &'a str,
+    pub name_full: &'a str,
+    pub name_host: &'a str,
+    pub name_user: &'a str,
+    pub region_timezone: &'a str,
+    pub var_key: &'a str,
+    pub zone_timezone: &'a str,
 }
 
 impl HandlerBox for BoxQuestionConfig<'_> {
@@ -751,67 +754,64 @@ impl HandlerBox for BoxQuestionConfig<'_> {
  
     fn get_text(&self) -> String {
         TextQuestionConfig {
-            username: &*self.username,
-            fullname: &*self.fullname,
-            usergroups: &*self.usergroups,
-            drive: &*self.drive, 
-            timezone_region: &*self.timezone_region,
-            timezone_zone: &*self.timezone_zone,
-            keymap: &*self.keymap,
-            keyvar: &*self.keyvar,
-            hostname: &*self.hostname,
+            usergroups: self.groups_user,
+            drive: self.name_drive, 
+            fullname: self.name_full,
+            hostname: self.name_host,
+            username: self.name_user,
+            timezone_region: self.region_timezone,
+            timezone_zone: self.zone_timezone,
+            keymap: self.map_key,
+            keyvar: self.var_key,
         }.to_string()
     }
 }
 
 pub struct BoxGaugeInstallation<'a> {
-    pub username: &'a str,
-    pub fullname: &'a str,
-    pub usergroups: &'a str,
-    pub drive: &'a str,
-    pub timezone_region: &'a str,
-    pub timezone_zone: &'a str,
-    pub keymap: &'a str,
-    pub keyvar: &'a str,
-    pub hostname: &'a str,
-    pub list_installation: &'a [(&'a str, &'a mut dyn Fn())], 
+    pub list_command: Vec<(String, Option<Command>)>, 
+    pub msg_error: &'a mut String,
 }
 
-impl HandlerBox for BoxGaugeInstallation<'_> {
+impl HandlerGauge for BoxGaugeInstallation<'_> {
     fn handle(&mut self) -> Page {
-        
-        
-        /*  for c_done in 0..c_total {
-            let percent = c_done / c_total;
-            Gauge::new("test", percent)
-            .show_with(Dialog::new()).expect("test");
-            self.do_command();
-        }*/
-
-        let c_total: u8 = self.list_installation.len() as u8;
+        let c_total = self.list_command.len();
 
         for c_done in 0..c_total {
-            let percent: u8 = c_done as u8 * 100 / c_total;
-            let tnc = &mut &self.list_installation[c_done as usize];
+            let percent: u8 = (c_done * 100 / c_total) as u8;
+            let tuple_command = &mut self.list_command[c_done];
+            let option_command = &mut tuple_command.1; 
 
-            BoxGauge::show(tnc.0, percent);
-            tnc.1();
+            BoxGauge::show(tuple_command.0.as_str(), percent);
+            sleep(Duration::from_millis(2000));
+            match option_command {
+                Some(command) => { 
+                    let mut display_command :OsString = OsString::from(command.get_program());
+                        display_command.push(" ");
+                        display_command.push(command.get_args()
+                        .collect::<Vec<_>>()
+                        .join(OsStr::new(" ")));  
+                    let result_command = command
+                        .output()
+                        .unwrap_or_else(|_| panic!("Failed to execute process:\n\n{:?}", display_command));
+                    info!("display_command:{:?}", display_command.clone().into_string());
+                    info!("result_command:{:?}", result_command);
+                    info!("result_status:{:?}", result_command.status.code());
+                    match result_command.status.success() {
+                        false => {
+                           *self.msg_error = format!("Process returned an error:\n\n{:?}\n\nOutput stderr:\n\n{}",
+                                display_command,  
+                                String::from_utf8(result_command.stderr).map_err(|non_utf8| 
+                                String::from_utf8_lossy(non_utf8.as_bytes()).into_owned()).unwrap()); 
+                            return Page::FailedCommand;
+                        }
+                        true => continue,
+                    }
+                },
+                None => {},
+            }    
         }
 
-        Page::MenuMain
-    }
-
-    fn get_text(&self) -> String {
-        String::new()
-        /*TextGaugeInstallation {
-            functions: &self.functions,
-        }.to_string()*/
-    }
-}
-
-impl HandlerCommand for BoxGaugeInstallation<'_> {
-    fn do_command(&self) {
-        CommandInstall::show_elapsed_time();
+        Page::Finish
     }
 }
 
@@ -822,17 +822,17 @@ pub struct BoxMenuConfig<'a> {
 impl HandlerBox for BoxMenuConfig<'_>  {
     fn handle(&mut self) -> Page {
         match BoxMenu::choice(BoxTypeMenu::Default, self.get_text(), 
-            BoxMenu::convert_page_list_to_dbox_list(&LIST_MENU_CONFIG)) {
+            BoxMenu::convert_page_list_to_dbox_list(LIST_MENU_CONFIG)) {
             (Choice::Yes, Some(choice_menu)) => {
                 *self.single_edit = true;
-                BoxMenu::get_page_from_selection_menu(&LIST_MENU_CONFIG, &choice_menu) 
+                BoxMenu::get_page_from_selection_menu(LIST_MENU_CONFIG, &choice_menu) 
             },
             (Choice::Escape, _) => Page::Escape,
             (Choice::Cancel, _) => {
                 *self.single_edit = false;
                 Page::QuestionConfig
             },
-            _ => Page::NoBoxFound,
+            _ => Page::NotFoundBox,
         }
     }
  
@@ -842,7 +842,7 @@ impl HandlerBox for BoxMenuConfig<'_>  {
 }
 
 pub struct BoxMenuKeymapHost<'a> {
-    pub keymap: &'a mut String,
+    pub map_key: &'a mut String,
     pub pathbuf: &'a mut PathBuf,
 }
 
@@ -851,13 +851,13 @@ impl HandlerBox for BoxMenuKeymapHost<'_> {
         match BoxMenu::choice(BoxTypeMenu::Default, self.get_text(), 
             ListFromCommand::keymap()) {
             (Choice::Yes, Some(keymap)) => {
-                *self.keymap = keymap.clone();
+                *self.map_key = keymap.clone();
                 *self.pathbuf = Path::new(PATH_BKEYMAP).join(keymap);
                 Page::MenuKeyvarHost
             },
             (Choice::Escape, _) => Page::Escape,
             (Choice::Cancel, _) => Page::MenuMain,
-            _ => Page::NoBoxFound,
+            _ => Page::NotFoundBox,
         }
     }
  
@@ -867,23 +867,23 @@ impl HandlerBox for BoxMenuKeymapHost<'_> {
 }
 
 pub struct BoxMenuKeyvarHost<'a>  {
-    pub keymap: &'a str,
-    pub keyvar: &'a mut String,
+    pub map_key: &'a str,
     pub path: &'a Path,
+    pub var_key: &'a mut String,
 }
 
 impl HandlerBox for BoxMenuKeyvarHost<'_>  {
     fn handle(&mut self) -> Page {
         match BoxMenu::choice(BoxTypeMenu::Default, self.get_text(), 
             ListFromCommand::keyvars(self.path)) {
-            (Choice::Yes, Some(keyvar)) => {
-                *self.keyvar = keyvar.clone();
-                CommandInstall::setup_keymap(self.keymap, &keyvar);
+            (Choice::Yes, Some(var_key)) => {
+                *self.var_key = var_key.clone();
+                CommandExecute::setup_keymap(self.map_key, &var_key);
                 Page::MenuMain
             },
             (Choice::Escape, _) => Page::Escape,
             (Choice::Cancel, _) => Page::MenuKeymapHost,
-            _ => Page::NoBoxFound,
+            _ => Page::NotFoundBox,
         }
 
     }
@@ -893,20 +893,13 @@ impl HandlerBox for BoxMenuKeyvarHost<'_>  {
     }
 }
 
-pub struct DBoxPool {
-    pub message_finish: BoxMessage
-}
-
-impl DBoxPool {
-    pub fn new() -> Self {
-        DBoxPool {
-            message_finish: BoxMessage::new(
-                Dialog::new()
-                .set_backtitle(TITRFOQ)
-                .set_title(TITLE)
-                .set_oklabel(LABEL_QUIT),
-                "Installation Finished!\nPress Quit to terminate program.",
-                Page::Quit),
-        }    
-    }
+pub fn get_box_message_finish() -> BoxMessage {
+    BoxMessage::new(
+        Dialog::new()
+        .set_backtitle(TITRFOQ)
+        .set_title(TITLE)
+        .set_width(45)
+        .set_height(6),
+        "Installation Finished!\nPress Enter to go back to the Main Menu.",
+        Page::MenuMain)
 }

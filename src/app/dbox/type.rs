@@ -6,10 +6,7 @@ use dialog::{
     Question
 };
 
-use crate::app::constants::{TITLE, TITRFOQ};
-
-// General empty string
-pub const EMPTY: &str = "";
+use crate::shared::constants::dbox::{TITLE, TITRFOQ};
 
 // General box labels
 pub const LABEL_BACK: &str = "Back";
@@ -64,8 +61,8 @@ pub enum Page {
     EmptyHostname, EmptyFullname,
     EmptyMenu, EmptyPasswordRoot, 
     EmptyPasswordUser, EmptyUsername,
-    Escape, Finish,
-    InputFullname, InputHostname,
+    ErrorUnknown, Escape, FailedCommand, 
+    Finish, InputFullname, InputHostname,
     InputUsergroups, InputUsername,
     InvalidHostname, InvalidUsername,
     MenuConfig, MenuDevice, MenuDrive, 
@@ -73,11 +70,12 @@ pub enum Page {
     MenuKeyvarGuest, MenuKeyvarHost, 
     MenuMain, MenuOperatingSystem, 
     MenuTimezoneRegion, MenuTimezoneZone, 
-    GaugeInstallation, NoBoxFound, 
-    NoMatchPasswordRoot, NoMatchPasswordUser,
-    PasswordUserSgn, PasswordUserRpt,
-    PasswordRootSgn, PasswordRootRpt,
-    QuestionConfig, Quit, UnknownError, 
+    GaugeInstallation, GaugeTestInstallation, 
+    NoMatchPasswordRoot, NoMatchPasswordUser, 
+    NotFoundBox, PasswordUserSgn, 
+    PasswordUserRpt, PasswordRootSgn, 
+    PasswordRootRpt, QuestionConfig,
+    Quit
 }
 
 // Types of boxes
@@ -98,15 +96,14 @@ pub trait HandlerBox {
     fn handle(&mut self) -> Page; 
 }
 
+pub trait HandlerGauge {
+    fn handle(&mut self) -> Page; 
+}
+
 pub trait HandlerPage {
     fn next(&self) -> Page; 
     fn previous(&self) -> Page; 
 }
-
-pub trait HandlerCommand {
-    fn do_command(&self); 
-}
-
 
 
 pub struct BoxMenu {}
@@ -132,11 +129,11 @@ impl BoxMenu {
     }
 
     pub fn get_page_from_selection_menu(list: &[(&str, Page)], selection: &str) -> Page {
-        match list.into_iter().find(|(x,_)| x == &selection) {
+        match list.iter().find(|(x,_)| x == &selection) {
             Some((_,y)) => {
                 y.clone()
             },
-            _ => Page::NoBoxFound,
+            _ => Page::NotFoundBox,
         }
     }
     
@@ -174,7 +171,7 @@ impl HandlerDialog for BoxInput {
 impl BoxInput {
     pub fn choice(text: String, default: &str, dbox: Option<Dialog>) -> (Choice, Option<String>) {
         match dbox {
-            Some(ibox) => Input::new(text).default(default).show_with(&ibox).expect(EXP_DBOX),
+            Some(ibox) => Input::new(text).default(default).show_with(ibox).expect(EXP_DBOX),
             None => Input::new(text).default(default).show_with(Self::get_box_default()).expect(EXP_DBOX),
         }
     }
@@ -196,7 +193,7 @@ impl HandlerDialog for BoxPassword {
 impl BoxPassword {
     pub fn choice(text: String, dbox: Option<Dialog>) -> (Choice, Option<String>) {
         match dbox {
-            Some(pbox) => Password::new(text).show_with(&pbox).expect(EXP_DBOX),
+            Some(pbox) => Password::new(text).show_with(pbox).expect(EXP_DBOX),
             None => Password::new(text).show_with(Self::get_box_default()).expect(EXP_DBOX),
         }
     }
@@ -219,7 +216,7 @@ impl HandlerDialog for BoxQuestion {
 impl BoxQuestion {
     pub fn choice(text: String, dbox: Option<Dialog>) -> Choice {
         match dbox {
-            Some(qbox) => Question::new(text).show_with(&qbox).expect(EXP_DBOX),
+            Some(qbox) => Question::new(text).show_with(qbox).expect(EXP_DBOX),
             None => Question::new(text).show_with(Self::get_box_default()).expect(EXP_DBOX),
         }
     }
@@ -238,7 +235,7 @@ impl HandlerDialog for BoxGauge {
 }
 
 impl BoxGauge {
-    pub fn show(text: &str, percent: u8) -> () {
+    pub fn show(text: &str, percent: u8) {
         Gauge::new(text, percent)
             .show_with(Self::get_box_default())
             .expect(EXP_DBOX)
@@ -262,7 +259,7 @@ impl BoxMessage {
     pub fn new(dialog: Dialog, text: &str, page: Page) -> Self {
         BoxMessage {
             dbox: dialog,
-            page: page,
+            page,
             text: text.to_string()
         }
     }

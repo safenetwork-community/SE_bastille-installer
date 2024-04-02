@@ -1,104 +1,106 @@
 mod dbox;
-mod constants;
+mod commands;
+mod install;
 
+use anyhow::{anyhow, Error, Result};
 use std::path::PathBuf;
+use std::process::Command;
 
-use crate::error::Error as Error; 
-use crate::error::ErrorKind as ErrorKind; 
+// use crate::error::ErrorKind as ErrorKind; 
+use crate::app::commands::execute::CommandExecute;
 use crate::app::dbox::*;
-use crate::app::dbox::command::*;
 use crate::app::dbox::ebox::*;
 use crate::app::dbox::r#type::*;
+use crate::app::install::BuilderListCommand;
+
+use crate::shared::constants::error::ErrorInstaller; 
 
 // Exit texts
 pub const MSG_EXIT_ESCAPE: &str =   "Escape pressed, exiting..";
 pub const MSG_EXIT_QUIT: &str =     "Quit pressed, exiting..";
-pub const MSG_EXIT_CONTACT: &str =  "Please contact the owner of this application.";
 
 pub struct App {
-    device: String,
-    os: String,
-    username: String,
-    usergroups: String,
-    fullname: String,
-    keymap_guest: String,
-    keymap_host: String,
-    keyvar_guest: String,
-    keyvar_host: String,
-    keyvar_path: PathBuf,
+    groups_user: String,
+    map_key_guest: String,
+    map_key_host: String, 
+    msg_error: String,
+    name_device: String,
+    name_drive: String,
+    name_host: String,
+    name_os: String,
+    name_user: String,
+    name_full: String,
     password_user: String,
     password_root: String,
-    drive: String,
-    timezone_path: PathBuf, 
-    timezone_region: String,
-    timezone_zone: String,
-    hostname: String,
+    pathbuf_timezone: PathBuf, 
+    pathbuf_var_key: PathBuf,
+    region_timezone: String,
     single_edit: bool,
-    error_msg: String,
-    dbox: DBoxPool
+    var_key_guest: String,
+    var_key_host: String, 
+    zone_timezone: String,
 }
 
 impl App {
     
     pub fn new() -> Self {
         App {
-            device: String::new(),
-            os: String::new(), 
-            username: String::new(),
-            fullname: String::new(),
-            keymap_guest: String::new(),
-            keymap_host: String::new(),
-            keyvar_guest: String::new(),
-            keyvar_host: String::new(),
-            keyvar_path: PathBuf::new(),
+            groups_user: String::new(),
+            map_key_guest: String::new(),
+            map_key_host: String::new(),
+            msg_error: String::new(),
+            name_device: String::new(),
+            name_drive: String::new(),
+            name_full: String::new(),
+            name_host: String::new(),
+            name_os: String::new(), 
+            name_user: String::new(),
+            var_key_guest: String::new(),
+            var_key_host: String::new(),
+            pathbuf_timezone: PathBuf::new(),
+            pathbuf_var_key: PathBuf::new(),
             password_user: String::new(),
             password_root: String::new(),
-            drive: String::new(),
-            timezone_path: PathBuf::new(),
-            timezone_region: String::new(),
-            timezone_zone: String::new(),
-            usergroups: String::new(),
-            hostname: String::new(),
+            region_timezone: String::new(),
             single_edit: false,
-            error_msg: String::new(),
-            dbox: DBoxPool::new(),
+            zone_timezone: String::new(),
         }    
     }
     
     fn get_box_menu_main(&mut self) -> BoxMenuMain<'_> {
         BoxMenuMain {
-            error_msg: &mut self.error_msg,
+            msg_error: &mut self.msg_error,
         }
     }
 
 
-    fn get_box_input_username(&mut self) -> BoxInputUsername<'_> {
+    fn get_box_input_name_user(&mut self) -> BoxInputUsername<'_> {
         BoxInputUsername {
             single_edit: self.single_edit,
-            username: &mut self.username,
+            name_user: &mut self.name_user,
         }
     }
 
-    fn get_box_input_usergroups(&mut self) -> BoxInputUsergroups<'_> {
+    fn get_box_input_groups_user(&mut self) -> BoxInputUsergroups<'_> {
         BoxInputUsergroups {
             single_edit: self.single_edit,
-            username: &*self.username,
-            usergroups: &mut self.usergroups,
+            name_user: &self.name_user,
+            groups_user: &mut self.groups_user,
         }
     }
 
-    fn get_box_input_fullname(&mut self) -> BoxInputFullname<'_> {
+    fn get_box_input_name_full(&mut self) -> BoxInputFullname<'_> {
         BoxInputFullname {
             single_edit: self.single_edit,
-            username: &*self.username,
-            fullname: &mut self.fullname,
+            name_user: &self.name_user,
+            name_full: &mut self.name_full,
         }
     }
 
     fn get_box_password_user_sign(&mut self) -> BoxPasswordUserSgn<'_> {
         BoxPasswordUserSgn {
             single_edit: self.single_edit,
-            username: &*self.username,
+            name_user: &self.name_user,
             password_user: &mut self.password_user,
         }
     }
@@ -106,8 +108,8 @@ impl App {
     fn get_box_password_user_repeat(&self) -> BoxPasswordUserRpt<'_> {
         BoxPasswordUserRpt {
             single_edit: self.single_edit,
-            username: &*self.username,
-            password_user: &*self.password_user,
+            name_user: &self.name_user,
+            password_user: &self.password_user,
         }
     }
 
@@ -121,105 +123,113 @@ impl App {
     fn get_box_password_root_repeat(&self) -> BoxPasswordRootRpt {
         BoxPasswordRootRpt {
             single_edit: self.single_edit,
-            password_root: &*self.password_root,
+            password_root: &self.password_root,
         }
     }
 
-    fn get_box_menu_device(&mut self) -> BoxMenuDevice {
+    fn get_box_menu_name_device(&mut self) -> BoxMenuDevice {
         BoxMenuDevice {
-            device: &mut self.device,
+            name_device: &mut self.name_device,
             single_edit: self.single_edit,
         }
     }
 
-    fn get_box_menu_drive(&mut self) -> BoxMenuDrive {
+    fn get_box_menu_name_drive(&mut self) -> BoxMenuDrive {
         BoxMenuDrive {
-            drive: &mut self.drive,
+            name_drive: &mut self.name_drive,
             single_edit: self.single_edit,
         }
     }
 
-    fn get_box_menu_os(&mut self) -> BoxMenuOperatingSystem {
+    fn get_box_menu_name_os(&mut self) -> BoxMenuOperatingSystem {
         BoxMenuOperatingSystem {
-            os: &mut self.os,
+            name_os: &mut self.name_os,
             single_edit: self.single_edit,
         }
     }
 
-    fn get_box_menu_timezone_region(&mut self) -> BoxMenuTimezoneRegion {
+    fn get_box_menu_region_timezone(&mut self) -> BoxMenuTimezoneRegion {
         BoxMenuTimezoneRegion {
             single_edit: self.single_edit,
-            region: &mut self.timezone_region,
-            pathbuf: &mut self.timezone_path,
+            region: &mut self.region_timezone,
+            pathbuf: &mut self.pathbuf_timezone,
         }
     }
 
-    fn get_box_menu_timezone_zone(&mut self) -> BoxMenuTimezoneZone<'_>  {
+    fn get_box_menu_zone_timezone(&mut self) -> BoxMenuTimezoneZone<'_>  {
         BoxMenuTimezoneZone {
             single_edit: self.single_edit,
-            zone: &mut self.timezone_zone,
-            path: &*self.timezone_path,
+            zone: &mut self.zone_timezone,
+            path: &self.pathbuf_timezone,
         }
     }
 
-    fn get_box_menu_keymap_guest(&mut self) -> BoxMenuKeymapGuest {
+    fn get_box_menu_map_key_guest(&mut self) -> BoxMenuKeymapGuest {
         BoxMenuKeymapGuest {
             single_edit: self.single_edit,
-            keymap: &mut self.keymap_guest,
-            pathbuf: &mut self.keyvar_path,
+            map_key: &mut self.map_key_guest,
+            pathbuf: &mut self.pathbuf_var_key,
         }
     }
 
-    fn get_box_menu_keyvar_guest(&mut self) -> BoxMenuKeyvarGuest<'_>  {
+    fn get_box_menu_var_key_guest(&mut self) -> BoxMenuKeyvarGuest<'_>  {
         BoxMenuKeyvarGuest {
             single_edit: self.single_edit,
-            keyvar: &mut self.keyvar_guest,
-            path: &*self.keyvar_path,
+            var_key: &mut self.var_key_guest,
+            path: &self.pathbuf_var_key,
         }
     }
 
-    fn get_box_input_hostname(&mut self) -> BoxInputHostname {
+    fn get_box_input_name_host(&mut self) -> BoxInputHostname {
         BoxInputHostname {
             single_edit: self.single_edit,
-            hostname: &mut self.hostname, 
+            name_host: &mut self.name_host, 
         }
     }
  
     fn get_box_question_config(&self) -> BoxQuestionConfig {
         BoxQuestionConfig {
-            username: &*self.username,
-            fullname: &*self.fullname,
-            usergroups: &*self.usergroups,
-            drive: &*self.drive, 
-            timezone_region: &*self.timezone_region,
-            timezone_zone: &*self.timezone_zone,
-            keymap: &*self.keymap_guest,
-            keyvar: &*self.keyvar_guest,
-            hostname: &*self.hostname,
+            groups_user: &self.groups_user,
+            map_key: &self.map_key_guest,
+            name_drive: &self.name_drive, 
+            name_full: &self.name_full,
+            name_host: &self.name_host,
+            name_user: &self.name_user,
+            region_timezone: &self.region_timezone,
+            var_key: &self.var_key_guest,
+            zone_timezone: &self.zone_timezone,
         }
     }
 
-    fn get_box_mixed_gauge_installation(&self) -> BoxGaugeInstallation {
+    fn get_box_mixed_gauge_installation(&mut self) -> BoxGaugeInstallation {
 
-        let list_installation: &[(&str, Box<dyn Fn()>)] = &[
-            ("Show elapsing time..", Box::new(CommandInstall::show_elapsed_time)),
-            ("Creating install..", Box::new(CommandInstall::create_install))
-        ];
+        let list_command: Vec<(String, Option<Command>)> = Self::get_list_installation(self);             
 
         BoxGaugeInstallation {
-            username: &self.username,
-            fullname: &self.fullname,
-            usergroups: &self.usergroups,
-            drive: &self.drive, 
-            timezone_region: &self.timezone_region,
-            timezone_zone: &self.timezone_zone,
-            keymap: &self.keymap_guest,
-            keyvar: &self.keyvar_guest,
-            hostname: &self.hostname,
-            list_installation: list_installation,
+            list_command,
+            msg_error: &mut self.msg_error,
         }
     }
 
+    fn get_box_mixed_gauge_test_installation(&mut self) -> BoxGaugeInstallation {
+        self.map_key_guest = String::from("yr");
+        self.name_drive = String::from("sda");
+        self.name_device = String::from("rpi4");
+        self.name_full = String::from("Fôlat Pjêrsômêj");
+        self.name_host = String::from("Rezosur-uq");
+        self.name_os = String::from("Artix");
+        self.name_user = String::from("folaht");
+        self.region_timezone = String::from("Europe");
+        self.var_key_guest = String::from("yr-af");
+        self.zone_timezone = String::from("Amsterdam");
+
+        let list_command: Vec<(String, Option<Command>)> = Self::get_list_installation(self);             
+
+        BoxGaugeInstallation {
+            list_command,
+            msg_error: &mut self.msg_error,
+        }
+    }
 
     fn get_box_menu_config(&mut self) -> BoxMenuConfig {
         BoxMenuConfig {
@@ -227,53 +237,51 @@ impl App {
         }
     }
 
-    fn get_box_menu_keymap_host(&mut self) -> BoxMenuKeymapHost<'_> {
+    fn get_box_menu_map_key_host(&mut self) -> BoxMenuKeymapHost<'_> {
         BoxMenuKeymapHost {
-            keymap: &mut self.keymap_host,
-            pathbuf: &mut self.keyvar_path,
+            map_key: &mut self.map_key_host,
+            pathbuf: &mut self.pathbuf_var_key,
         }
     }
 
-    fn get_box_menu_keyvar_host(&mut self) -> BoxMenuKeyvarHost<'_>  {
+    fn get_box_menu_var_key_host(&mut self) -> BoxMenuKeyvarHost<'_>  {
         BoxMenuKeyvarHost {
-            keymap: &*self.keymap_host,
-            keyvar: &mut self.keyvar_host,
-            path: &*self.keyvar_path,
+            map_key: &self.map_key_host,
+            var_key: &mut self.var_key_host,
+            path: &self.pathbuf_var_key,
         }
     }
-
 
     pub fn run(&mut self) -> Result<(), Error> {
         let mut current_box = Page::MenuMain;
 
         loop {
             match current_box {
-                Page::Escape => return Self::escape(self),
-                Page::EmptyMenu => return Self::empty_menu(),
                 Page::EmptyFullname => current_box = EBOX_EMPTY_FULLNAME.handle(), 
                 Page::EmptyHostname => current_box = EBOX_EMPTY_HOSTNAME.handle(), 
                 Page::EmptyPasswordRoot => current_box = EBOX_EMPTY_PASSWORD_ROOT.handle(),  
                 Page::EmptyPasswordUser => current_box = EBOX_EMPTY_PASSWORD_USER.handle(), 
                 Page::EmptyUsername => current_box = EBOX_EMPTY_USERNAME.handle(),
-                Page::Finish => current_box = self.dbox.message_finish.handle(),
-                Page::InputFullname => current_box = Self::get_box_input_fullname(self).handle(),
-                Page::InputHostname => current_box = Self::get_box_input_hostname(self).handle(),
-                Page::InputUsergroups => current_box = Self::get_box_input_usergroups(self).handle(),
-                Page::InputUsername => current_box = Self::get_box_input_username(self).handle(),            
+                Page::Finish => current_box = dbox::get_box_message_finish().handle(),
+                Page::GaugeInstallation => current_box = Self::get_box_mixed_gauge_installation(self).handle(),
+                Page::GaugeTestInstallation => current_box = Self::get_box_mixed_gauge_test_installation(self).handle(),
+                Page::InputFullname => current_box = Self::get_box_input_name_full(self).handle(),
+                Page::InputHostname => current_box = Self::get_box_input_name_host(self).handle(),
+                Page::InputUsergroups => current_box = Self::get_box_input_groups_user(self).handle(),
+                Page::InputUsername => current_box = Self::get_box_input_name_user(self).handle(),            
                 Page::InvalidHostname => current_box = EBOX_INVALID_HOSTNAME.handle(),
                 Page::InvalidUsername => current_box = EBOX_INVALID_USERNAME.handle(), 
                 Page::MenuConfig => current_box = Self::get_box_menu_config(self).handle(),
-                Page::MenuDevice => current_box = Self::get_box_menu_device(self).handle(),
-                Page::MenuDrive => current_box = Self::get_box_menu_drive(self).handle(),
+                Page::MenuDevice => current_box = Self::get_box_menu_name_device(self).handle(),
+                Page::MenuDrive => current_box = Self::get_box_menu_name_drive(self).handle(),
                 Page::MenuMain => current_box = Self::get_box_menu_main(self).handle(),
-                Page::MenuKeymapGuest => current_box = Self::get_box_menu_keymap_guest(self).handle(),
-                Page::MenuKeymapHost => current_box = Self::get_box_menu_keymap_host(self).handle(),
-                Page::MenuKeyvarGuest => current_box = Self::get_box_menu_keyvar_guest(self).handle(),
-                Page::MenuKeyvarHost => current_box = Self::get_box_menu_keyvar_host(self).handle(),
-                Page::MenuOperatingSystem => current_box = Self::get_box_menu_os(self).handle(),
-                Page::MenuTimezoneRegion => current_box = Self::get_box_menu_timezone_region(self).handle(),
-                Page::MenuTimezoneZone => current_box = Self::get_box_menu_timezone_zone(self).handle(),
-                Page::GaugeInstallation => current_box = Self::get_box_mixed_gauge_installation(self).handle(),
+                Page::MenuKeymapGuest => current_box = Self::get_box_menu_map_key_guest(self).handle(),
+                Page::MenuKeymapHost => current_box = Self::get_box_menu_map_key_host(self).handle(),
+                Page::MenuKeyvarGuest => current_box = Self::get_box_menu_var_key_guest(self).handle(),
+                Page::MenuKeyvarHost => current_box = Self::get_box_menu_var_key_host(self).handle(),
+                Page::MenuOperatingSystem => current_box = Self::get_box_menu_name_os(self).handle(),
+                Page::MenuTimezoneRegion => current_box = Self::get_box_menu_region_timezone(self).handle(),
+                Page::MenuTimezoneZone => current_box = Self::get_box_menu_zone_timezone(self).handle(),
                 Page::NoMatchPasswordRoot => current_box = EBOX_NOMATCH_PASSWORD_ROOT.handle(),
                 Page::NoMatchPasswordUser => current_box = EBOX_NOMATCH_PASSWORD_USER.handle(),
                 Page::PasswordRootSgn => current_box = Self::get_box_password_root_sign(self).handle(),
@@ -281,42 +289,26 @@ impl App {
                 Page::PasswordUserSgn => current_box = Self::get_box_password_user_sign(self).handle(),
                 Page::PasswordUserRpt => current_box = Self::get_box_password_user_repeat(self).handle(),
                 Page::QuestionConfig => current_box = Self::get_box_question_config(self).handle(),
-                Page::Quit => return Self::quit(self),
-                Page::UnknownError => return Self::unknown_error(self),
-                _ => return Self::box_not_found(),
+                page => return Self::exit(page, (*self.msg_error).to_string()),
             };
         }
     }
+ 
+    fn exit(page: Page, msg_error: String) -> Result<(), Error> {
+        CommandExecute::clear();
+        match page {
+            Page::EmptyMenu => Err(anyhow!(ErrorInstaller::EmptyMenu())),
+            Page::NotFoundBox => Err(anyhow!(ErrorInstaller::NotFoundBox())),
+            Page::FailedCommand => Err(anyhow!(ErrorInstaller::FailedCommand(msg_error))),
+            Page::Escape => Ok(println!("==> {}", MSG_EXIT_ESCAPE)),
+            Page::Quit => Ok(println!("==> {}", MSG_EXIT_QUIT)),
+            _ => Err(anyhow!(ErrorInstaller::Unknown(msg_error)))
+        }
+    }
     
-    fn quit(&mut self) -> Result<(), Error> {      
-        Self::exit(self, MSG_EXIT_QUIT)
+    fn get_list_installation(&self) -> Vec<(String, Option<Command>)> {
+        let builder_list_command = BuilderListCommand::new(&self.name_device, &self.name_drive, 
+            PathBuf::from(format!("/dev/{}", self.name_drive)), &self.password_user);
+        builder_list_command.build()
     }
- 
-    fn escape(&mut self) -> Result<(), Error> {     
-       Self::exit(self, MSG_EXIT_ESCAPE)
-    }
-
-    fn exit(&mut self, msg: &str) -> Result<(), Error> {     
-        CommandInstall::clear();
-        println!("==> {}", msg);
-        Ok(())
-    }
-
-    fn box_not_found() -> Result<(), Error> {
-        CommandInstall::clear();
-        eprintln!("==> {}\n{}", Error::new(ErrorKind::BoxNotFound()), MSG_EXIT_CONTACT);
-        Err(Error::new(ErrorKind::BoxNotFound()))    
-    }
- 
-    fn empty_menu() -> Result<(), Error> {     
-        CommandInstall::clear();
-        println!("==> {}\n{}", Error::new(ErrorKind::EmptyMenu()), MSG_EXIT_CONTACT);
-        Err(Error::new(ErrorKind::EmptyMenu()))    
-    }
-
-    fn unknown_error(&mut self) -> Result<(), Error> {     
-        CommandInstall::clear();
-        println!("==> {}\n{}", Error::new(ErrorKind::UnknownError(self.error_msg.clone())), MSG_EXIT_CONTACT);
-        Err(Error::new(ErrorKind::UnknownError(self.error_msg.clone())))    
-    }    
 }
