@@ -3,10 +3,9 @@ mod commands;
 mod install;
 
 use anyhow::{anyhow, Error, Result};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
-// use crate::error::ErrorKind as ErrorKind; 
 use crate::app::commands::execute::CommandExecute;
 use crate::app::dbox::*;
 use crate::app::dbox::ebox::*;
@@ -32,8 +31,8 @@ pub struct App {
     name_full: String,
     password_user: String,
     password_root: String,
-    pathbuf_timezone: PathBuf, 
-    pathbuf_var_key: PathBuf,
+    path_timezone: PathBuf, 
+    path_var_key: PathBuf,
     region_timezone: String,
     single_edit: bool,
     var_key_guest: String,
@@ -57,8 +56,8 @@ impl App {
             name_user: String::new(),
             var_key_guest: String::new(),
             var_key_host: String::new(),
-            pathbuf_timezone: PathBuf::new(),
-            pathbuf_var_key: PathBuf::new(),
+            path_timezone: PathBuf::new(),
+            path_var_key: PathBuf::new(),
             password_user: String::new(),
             password_root: String::new(),
             region_timezone: String::new(),
@@ -152,7 +151,7 @@ impl App {
         BoxMenuTimezoneRegion {
             single_edit: self.single_edit,
             region: &mut self.region_timezone,
-            pathbuf: &mut self.pathbuf_timezone,
+            path: &mut self.path_timezone,
         }
     }
 
@@ -160,7 +159,7 @@ impl App {
         BoxMenuTimezoneZone {
             single_edit: self.single_edit,
             zone: &mut self.zone_timezone,
-            path: &self.pathbuf_timezone,
+            path: &self.path_timezone,
         }
     }
 
@@ -168,7 +167,7 @@ impl App {
         BoxMenuKeymapGuest {
             single_edit: self.single_edit,
             map_key: &mut self.map_key_guest,
-            pathbuf: &mut self.pathbuf_var_key,
+            path: &mut self.path_var_key,
         }
     }
 
@@ -176,7 +175,7 @@ impl App {
         BoxMenuKeyvarGuest {
             single_edit: self.single_edit,
             var_key: &mut self.var_key_guest,
-            path: &self.pathbuf_var_key,
+            path: &self.path_var_key,
         }
     }
 
@@ -203,7 +202,7 @@ impl App {
 
     fn get_box_mixed_gauge_installation(&mut self) -> BoxGaugeInstallation {
 
-        let list_command: Vec<(String, Option<Command>)> = Self::get_list_installation(self);             
+        let list_command: Vec<(String, Option<Command>)> = Self::get_list_installation_2(self);             
 
         BoxGaugeInstallation {
             list_command,
@@ -219,6 +218,7 @@ impl App {
         self.name_host = String::from("Rezosur-uq");
         self.name_os = String::from("Artix");
         self.name_user = String::from("folaht");
+        self.password_user = String::from("ellAellaeEe11");
         self.region_timezone = String::from("Europe");
         self.var_key_guest = String::from("yr-af");
         self.zone_timezone = String::from("Amsterdam");
@@ -240,7 +240,7 @@ impl App {
     fn get_box_menu_map_key_host(&mut self) -> BoxMenuKeymapHost<'_> {
         BoxMenuKeymapHost {
             map_key: &mut self.map_key_host,
-            pathbuf: &mut self.pathbuf_var_key,
+            path: &mut self.path_var_key,
         }
     }
 
@@ -248,7 +248,7 @@ impl App {
         BoxMenuKeyvarHost {
             map_key: &self.map_key_host,
             var_key: &mut self.var_key_host,
-            path: &self.pathbuf_var_key,
+            path: &self.path_var_key,
         }
     }
 
@@ -307,8 +307,19 @@ impl App {
     }
     
     fn get_list_installation(&self) -> Vec<(String, Option<Command>)> {
-        let builder_list_command = BuilderListCommand::new(&self.name_device, &self.name_drive, 
-            PathBuf::from(format!("/dev/{}", self.name_drive)), &self.password_user);
+        let drive: String = format!("/dev/{}", &self.name_drive); 
+        let builder_list_command = BuilderListCommand::new(
+            &self.name_device, Path::new(&drive), 
+            &self.name_os, &self.password_user);
         builder_list_command.build()
     }
+
+    fn get_list_installation_2(&self) -> Vec<(String, Option<Command>)> {
+        let drive: String = format!("/dev/{}", &self.name_drive); 
+        let builder_list_command = BuilderListCommand::new(
+            &self.name_device, Path::new(&drive), 
+            &self.name_os, &self.password_user);
+        builder_list_command.build_2()
+    }
+
 }

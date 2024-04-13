@@ -1,6 +1,9 @@
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::str;
+use std::string::FromUtf8Error;
+ 
+use anyhow::Result;
 
 use const_format::str_split;
 
@@ -95,29 +98,45 @@ impl ListFromCommand {
             REGEX_FIND_DIRS_ALL.to_vec(), SED_FIND_DEFAULT)
     }
 
-    pub fn mounted_partitions(drive: &str) -> Vec<String> {
-        let command_sh = format!(r#"{} {} /dev/{}?"#, LSBLK, ARG_MOUNTED_PARTITIONS, drive);
+    pub fn mounted_partitions(path_drive: &Path) -> Vec<String> {
+        match Self::get_output_partitions_mounted(path_drive) {
+            Ok(output) => { 
+                output.lines().filter_map(|e| { 
+                let paths = e.split_whitespace().collect::<Vec<_>>();  
+                match paths.len() { 
+                    2 => Some(String::from(paths[0])),
+                    _ => None,
+                }}).collect()
+            }
+            _ => panic!("UtfError partitions mounted"),
+        } 
+    }
+
+    pub fn mounted_partition_numbers(path_drive: &Path) -> Vec<String> {
+        match Self::get_output_partitions_mounted(path_drive) {
+            Ok(output) => {
+                output.lines().filter_map(|e| { 
+                let paths = e.split_whitespace().collect::<Vec<_>>();   
+                match paths.len() { 
+                    2 => paths[0].strip_prefix(path_drive.to_str().unwrap()).map(String::from),
+                    _ => None,
+                }}).collect()
+            }
+            _ => panic!("UtfError partitions mounted"),
+        }
+    }
+
+    fn get_output_partitions_mounted(path_drive: &Path) -> Result<String, FromUtf8Error> {
+        let command_sh = format!(r#"{} {} {}?"#, LSBLK, ARG_MOUNTED_PARTITIONS, path_drive.display());
         let output_command = Command::new(SH)
             .arg(ARG_C)
             .arg(command_sh.clone())
             .output()
             .unwrap_or_else(|e| panic!("{}{}\n{}", ERR_FAILED_EXECUTE_LSBLK, command_sh, e));
-        
-        let mut list: Vec<String> = Vec::new(); 
-        let stdout_command = String::from_utf8_lossy(&output_command.stdout);
-        
-        for line in stdout_command.lines() {
-            let split: Vec<&str> = line.split_whitespace().collect();
-            
-            match split.len() {
-                0 => panic!("Mounted partition has no name."),
-                1 => continue,
-                _ => list.push(String::from(split[0])),
-            }
-        }
-        list
-    }
-       
+        String::from_utf8(output_command.stdout)
+    } 
+
+
     pub fn timeregion() -> Vec<[String; 2]> {
         Self::find(Path::new(PATH_ZONEINFO), 
             REGEX_FIND_DIRS_CAP.to_vec(), SED_FIND_DEFAULT)

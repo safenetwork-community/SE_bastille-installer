@@ -20,7 +20,6 @@ use crate::app::dbox::r#type::*;
 use crate::shared::constants::dbox::*;
 use crate::shared::constants::string::EMPTY;
 
-
 pub struct BoxMenuMain<'a> {
     pub msg_error: &'a mut String,
 }
@@ -514,7 +513,7 @@ impl HandlerPage for BoxPasswordRootRpt<'_> {
 
 pub struct BoxMenuTimezoneRegion<'a> {
     pub region: &'a mut String,
-    pub pathbuf: &'a mut PathBuf,
+    pub path: &'a mut PathBuf,
     pub single_edit: bool,
 }
 
@@ -524,7 +523,7 @@ impl HandlerBox for BoxMenuTimezoneRegion<'_> {
             ListFromCommand::timeregion()) {
             (Choice::Yes, Some(region)) => {
                 *self.region = region.clone();
-                *self.pathbuf = Path::new(PATH_ZONEINFO).join(region);
+                *self.path = Path::new(PATH_ZONEINFO).join(region);
                 self.next()
             },
             (Choice::Escape, _) => Page::Escape,
@@ -597,7 +596,7 @@ impl HandlerPage for BoxMenuTimezoneZone<'_> {
 
 pub struct BoxMenuKeymapGuest<'a> {
     pub map_key: &'a mut String,
-    pub pathbuf: &'a mut PathBuf,
+    pub path: &'a mut PathBuf,
     pub single_edit: bool,
 }
 
@@ -607,7 +606,7 @@ impl HandlerBox for BoxMenuKeymapGuest<'_> {
             ListFromCommand::keymap()) {
             (Choice::Yes, Some(map_key)) => {
                 *self.map_key = map_key.clone();
-                *self.pathbuf = Path::new(PATH_BKEYMAP).join(map_key);
+                *self.path = Path::new(PATH_BKEYMAP).join(map_key);
                 self.next()
             },
             (Choice::Escape, _) => Page::Escape,
@@ -782,7 +781,7 @@ impl HandlerGauge for BoxGaugeInstallation<'_> {
             let option_command = &mut tuple_command.1; 
 
             BoxGauge::show(tuple_command.0.as_str(), percent);
-            sleep(Duration::from_millis(2000));
+            sleep(Duration::from_millis(1000));
             match option_command {
                 Some(command) => { 
                     let mut display_command :OsString = OsString::from(command.get_program());
@@ -795,7 +794,7 @@ impl HandlerGauge for BoxGaugeInstallation<'_> {
                         .unwrap_or_else(|_| panic!("Failed to execute process:\n\n{:?}", display_command));
                     info!("display_command:{:?}", display_command.clone().into_string());
                     info!("result_command:{:?}", result_command);
-                    info!("result_status:{:?}", result_command.status.code());
+
                     match result_command.status.success() {
                         false => {
                            *self.msg_error = format!("Process returned an error:\n\n{:?}\n\nOutput stderr:\n\n{}",
@@ -843,7 +842,7 @@ impl HandlerBox for BoxMenuConfig<'_>  {
 
 pub struct BoxMenuKeymapHost<'a> {
     pub map_key: &'a mut String,
-    pub pathbuf: &'a mut PathBuf,
+    pub path: &'a mut PathBuf,
 }
 
 impl HandlerBox for BoxMenuKeymapHost<'_> {
@@ -852,7 +851,7 @@ impl HandlerBox for BoxMenuKeymapHost<'_> {
             ListFromCommand::keymap()) {
             (Choice::Yes, Some(keymap)) => {
                 *self.map_key = keymap.clone();
-                *self.pathbuf = Path::new(PATH_BKEYMAP).join(keymap);
+                *self.path = Path::new(PATH_BKEYMAP).join(keymap);
                 Page::MenuKeyvarHost
             },
             (Choice::Escape, _) => Page::Escape,
