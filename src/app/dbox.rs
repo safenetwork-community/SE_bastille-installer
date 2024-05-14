@@ -791,7 +791,7 @@ impl HandlerGauge for BoxGaugeInstallation<'_> {
                         .join(OsStr::new(" ")));  
                     let result_command = command
                         .output()
-                        .unwrap_or_else(|_| panic!("Failed to execute process:\n\n{:?}", display_command));
+                        .unwrap_or_else(|e| panic!("Failed to execute process:\n\n{:?}\n{}", display_command, e));
                     info!("display_command:{:?}", display_command.clone().into_string());
                     info!("result_command:{:?}", result_command);
 

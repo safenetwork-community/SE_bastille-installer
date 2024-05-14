@@ -79,7 +79,8 @@ const SINGLE: &str = "single";
 const SIZE: &str = "size";
 const START: &str = "start";
 const STR_AND: &str = "&";
-const SUB_VOL_COMPRESS: &str = "compress=zstd,subvol=";
+const MAIN_VOL_COMPRESS: &str = "compress=zstd";
+const SUB_VOL_COMPRESS: &str = "${MAIN_VOL_COMPRESS},subvol=";
 const UBOOT_RASPBERRY_PI: &str = "uboot-raspberrpi";
 const WHEEL: &str = "wheel";
 const IF_DEV_ZERO: &str = "if=/dev/zero";
@@ -103,7 +104,7 @@ const SYS_BLOCK: &str = "/sys/block";
 const DIR_VAR_TMP: &str = "/var/tmp";
 
 // general sh arguments
-// const ASC_QUIET: &str = formatcp!("{ONE_G} {DEV_NULL} {TWO_GN_ONE}");
+//const ASC_QUIET: &str = formatcp!("{ONE_G} {DEV_NULL} {TWO_GN_ONE}");
 const ASC_QUIET: &str = formatcp!("");
 
 // sh arguments
@@ -131,33 +132,33 @@ pub struct CommandAction {}
 impl CommandAction {
 /*
     pub fn add_bootloader() -> Option<Command> {
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.arg("echo");
         Some(cmd)
     }
 */
     pub fn apply_overlay() -> Option<Command> {
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.arg("echo");
         Some(cmd)
     }
 
 
     pub fn add_support_btrfs() -> Option<Command> {
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.args(["echo"]);
         Some(cmd)
     }
 
     pub fn add_users(dir: &str, password_user: &str) -> Option<Command> {
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.args([ARTIX_CHROOT, dir, USERADD, ARG_M, ARGS_G, WHEEL, ARG_P, password_user])
         .arg(STR_AND);
         Some(cmd)
     }
 
     pub fn clean_up_install(arch: &str) -> Option<Command> {
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C);
         let mut command_sh = String::new(); 
         for dir in CLEANUP_DIRS {
@@ -175,14 +176,14 @@ impl CommandAction {
  
     pub fn dd_first_mbs(path_drive: &Path) -> Option<Command> {
         let dis_drive = path_drive.display();
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C);
         cmd.arg(format!("{DD} {IF_DEV_ZERO} of={dis_drive} {BS_1M} {COUNT_32} {ASC_QUIET}"));
         Some(cmd)
     }
  
     pub fn enable_services_root(dir: &str) -> Option<Command> {
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.arg(ARTIX_CHROOT)
         .arg(dir)
         .args(ASCS_DINIT_E)
@@ -191,7 +192,7 @@ impl CommandAction {
     }
 
     pub fn enable_services_user() -> Option<Command> {
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.args(["echo"]);
         Some(cmd)
     }
@@ -201,7 +202,7 @@ impl CommandAction {
         end_dir.push_str(DIR_VAR_TMP);
         match Path::new(&end_dir).exists() {
             false => {
-                let mut cmd = Command::new(DOAS);
+                let mut cmd = Command::new(SUDO);
                 cmd.args(ARG_SH_C)
                 .arg(format!("{ASC_TAR} {file_loc} {ARGS_C} {dest_dir}"));
                 Some(cmd)
@@ -213,7 +214,7 @@ impl CommandAction {
 
     pub fn install_packages(dir: &str) -> Option<Command> {
         let dir: &Path = Path::new(dir);
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C);
         let command_sh = format!(
             r#"
@@ -229,7 +230,7 @@ impl CommandAction {
 
     /*
     pub fn make_dir(dir: &str) -> Option<Command> {
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C)
         .arg(format!("{ASC_MKDIR_P} {}", 
             Path::new(dir).display()));
@@ -249,7 +250,7 @@ impl CommandAction {
         match dirs.is_empty() {
             true => None,
             false => {
-                let mut cmd = Command::new(DOAS);
+                let mut cmd = Command::new(SUDO);
                 cmd.args(ARG_SH_C).
                     arg(dirs.iter().with_position().map(|e| {
                     match e {
@@ -263,16 +264,16 @@ impl CommandAction {
     }
 
     pub fn make_label(drive: &Path) -> Option<Command> {
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C)
-        .arg(format!("TEST=$(whoami); echo $TEST;{} {} {} {}", ASC_PARTED_S, drive.display(), ASC_MKLABEL_GPT, ASC_QUIET));
+        .arg(format!("{} {} {} {}", ASC_PARTED_S, drive.display(), ASC_MKLABEL_GPT, ASC_QUIET));
         Some(cmd)
     }
 
     pub fn make_boot_partition(drive: &Path, partition_type: &str) -> Option<Command> { 
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C)
-        .arg(format!("{} {} {} {} {} {}", ASC_PARTED_OPT, drive.display(), ASC_MKPART_PRIMARY, 
+        .arg(format!("{} {} {} {} {}{}", ASC_PARTED_OPT, drive.display(), ASC_MKPART_PRIMARY, 
             partition_type, ASC_BOOT_SPACE, ASC_QUIET));
         Some(cmd)
     }
@@ -284,12 +285,11 @@ impl CommandAction {
                     SIZE=`{ASC_CAT_SB}/{device}/{device}{partition_prev}/{SIZE}`; \
                     END_SECTOR=$(expr $START + $SIZE);");
 
-                info!("calc:{}", calc);
-
-                let mut cmd = Command::new(DOAS);
+                let mut cmd = Command::new(SUDO);
                 cmd.args(ARG_SH_C)
                 .arg(format!("{} {ASC_PARTED_OPT} {} {ASC_MKPART_PRIMARY} {} {ASC_END_SECTOR} {C_PERCENT} {ASC_QUIET}", 
                     calc, drive.display(), partition_type));
+                info!("calc cmd:{:?}", cmd);
                 Some(cmd)
             },
             None => panic!("Cannot unwrap device name")
@@ -298,28 +298,28 @@ impl CommandAction {
     }
 
     pub fn make_subvol(drive: &Path) -> Option<Command> {
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C)
         .arg(format!("{ASC_BTRFS_SUCR} {} {ASC_QUIET}", drive.display()));
         Some(cmd)
     }
 
     pub fn mkfs_btrfs(drive: &Path, partition: u32) -> Option<Command> {
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C)
         .arg(format!("{MKFS_BTRFS} {ARG_M} {SINGLE} {ARGS_L} {LABEL_ROOT} {ARG_F} {}{partition} {ASC_QUIET}", drive.display()));
         Some(cmd)
     }
 
     pub fn mkfs_vfat(drive: &Path, partition: u32) -> Option<Command> {
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C); 
         cmd.arg(format!("{MKFS_VFAT} {ARG_N} {LABEL_BOOT} {}{partition} {ASC_QUIET}", drive.display()));
         Some(cmd)
     }
 
     pub fn mount(drive: &Path, dir: &str) -> Option<Command> {
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.arg(MOUNT)
         .arg(format!("{}", drive.display()))
         .arg(dir);
@@ -327,16 +327,16 @@ impl CommandAction {
     }
 
     pub fn mount_mainvol(partition: &Path, dir: &str) -> Option<Command> {
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C)
-        .arg(format!("{ASC_MOUNT_O} {SUB_VOL_COMPRESS} {} {}", 
+        .arg(format!("{ASC_MOUNT_O} {MAIN_VOL_COMPRESS} {} {}", 
             partition.display(), dir));
         Some(cmd)
     }
 
     pub fn mount_subvols(partition: &Path, subvols: &[(&str, &str)]) -> Option<Command> {
         let mut command_sh = String::new();
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C);
         
         let mut subvols = subvols.iter().with_position().peekable();
@@ -355,7 +355,7 @@ impl CommandAction {
 
     pub fn partprobe(drive: &Path) -> Option<Command> {
         let command_sh = format!("{} {} {}", PARTPROBE, drive.display(), ASC_QUIET);
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C)
             .arg(command_sh.clone());
         Some(cmd)
@@ -363,40 +363,42 @@ impl CommandAction {
 
     pub fn remove_partitions(drive: &Path) -> Option<Command> {
         let dis_drive = drive.display();
-        let list_pts = ListFromCommand::mounted_partition_numbers(drive);
+        let list_pts = ListFromCommand::all_partition_numbers(drive);
 
         match list_pts.len() {
             0 => None,
              _ => {
-                let mut cmd = Command::new(DOAS); 
+                let mut cmd = Command::new(SUDO); 
                 cmd.args(ARG_SH_C);
-                let sh_command: String = list_pts.iter().with_position().map(|e| {
+                let sh_remove: String = list_pts.iter().with_position().map(|e| {
                     match e {
-                        (Position::First, partition) | (Position::Middle, partition) => format!("{ASC_PARTED_S} {dis_drive} {RM} {partition}{ASC_QUIET}; "),
-                        (_, partition) => format!("{ASC_PARTED_S} {dis_drive} {RM} {partition}{ASC_QUIET}"),
+                        (Position::First, partition) | (Position::Middle, partition) => format!("{ASC_PARTED_S} {dis_drive} {RM} {partition} {ASC_QUIET}; "),
+                        (_, partition) => format!("{ASC_PARTED_S} {dis_drive} {RM} {partition} {ASC_QUIET}"),
                     }
                 }).collect();
-                cmd.arg(format!("{}{}", Self::umount_drive(drive).unwrap(), sh_command));
+                match Self::umount_drive(drive) {
+                    Some(sh_umount) => cmd.arg(format!("{}{}", sh_umount, sh_remove)),
+                    None => cmd.arg(sh_remove),
+                };
                 Some(cmd)        
             }
-
         }
     }
 
     pub fn set_settings_system() -> Option<Command> {
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.args(["echo"]);
         Some(cmd)
     }
 
     pub fn set_list_mirror(dir: &str) -> Option<Command> {
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.args([ARTIX_CHROOT, dir, PACMAN_MIRRORS, ARG_F10, ASC_QUIET]);
         Some(cmd)
     }
 
     pub fn setup_keyrings(dir: &str) -> Option<Command> { 
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C)
         .arg(format!("{ARTIX_CHROOT} {dir} {ASC_PACMAN_KEY_INIT}{SEMI_COLON} \
             {ARTIX_CHROOT} {dir} {ASC_PACMAN_KEY_POPULATE}"));
@@ -410,7 +412,7 @@ impl CommandAction {
     }
     
     pub fn umount(path: &Path) -> Option<Command> {
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.arg(UMOUNT)
         .arg(format!("{}", path.display()));
         Some(cmd)
@@ -418,7 +420,6 @@ impl CommandAction {
 
     fn umount_drive(drive: &Path) -> Option<String> { 
         let list_pts = ListFromCommand::mounted_partitions(drive);
-        // info!("partitions umount_drive: {:?}", list_pts);
 
         match list_pts.len() {
             0 => None,
@@ -429,7 +430,7 @@ impl CommandAction {
     }
 
     pub fn umount_dirs(dirs: &[&str]) -> Option<Command> {
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C);
        
         let sh_command: String = dirs.iter().with_position().map(|e| {
@@ -443,12 +444,12 @@ impl CommandAction {
         Some(cmd)
     }
 
-    pub fn wget(current_dir: &str, path: &str) -> Option<Command> {
+    pub fn wget(path: &str, url_download: &str) -> Option<Command> {
         match Path::new(path).exists() {
             true => {
-                let mut cmd = Command::new(DOAS);
-                cmd.current_dir(current_dir);
-                cmd.args([WGET, ARG_Q, path]);
+                let mut cmd = Command::new(SUDO);
+                cmd.current_dir(path);
+                cmd.args([WGET, ARG_Q, url_download]);
                 Some(cmd)
             },
             false => None,
@@ -456,7 +457,7 @@ impl CommandAction {
     }
 
     pub fn setup_keymap(keymap: &str, keyvar: &str) -> Option<Command> {
-        let mut cmd = Command::new(DOAS);
+        let mut cmd = Command::new(SUDO);
         cmd.arg(SETUP_KEYMAP)
         .arg(keymap)
         .arg(keyvar);

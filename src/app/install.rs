@@ -95,7 +95,7 @@ impl BuilderListCommand<'_> {
     }
 
     pub fn build(self) -> Vec<(String, Option<Command>)> {
-        let mut builder = Vec::new(); // self.prepare();
+        let mut builder = self.prepare();
         builder.extend(self.install_os());
         // builder.extend(self.install_bootloader());
         builder.extend(self.cleanup());

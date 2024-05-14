@@ -3,9 +3,9 @@ use const_format::{formatcp, str_split};
 use crate::shared::constants::char::SPACE;
 
 // General commands
-pub const DOAS: &str = "doas";
 pub const LSBLK: &str = "lsblk";
 pub const SH: &str = "sh"; 
+pub const SUDO: &str = "sudo";
 
 // General arguments
 pub const DEV_NULL: &str = "/dev/null";

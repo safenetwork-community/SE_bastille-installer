@@ -87,10 +87,6 @@ pub trait HandlerDialog {
     fn get_box_default() -> Dialog; 
 }
 
-pub trait HandlerSdialog {
-    fn set_box_default() -> Dialog; 
-}
-
 pub trait HandlerBox {
     fn get_text(&self) -> String; 
     fn handle(&mut self) -> Page; 

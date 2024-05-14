@@ -1,9 +1,6 @@
 use std::path::Path;
 use std::process::{Command, Stdio};
-use std::str;
-use std::string::FromUtf8Error;
- 
-use anyhow::Result;
+use std::str; 
 
 use const_format::str_split;
 
@@ -27,6 +24,8 @@ pub const PATH_ZONEINFO: &str = "/usr/share/zoneinfo";
 
 // Arguments
 const ARG_MOUNTED_PARTITIONS: &str = "-no name,mountpoints -lp";
+const ARG_FILTER_MOUNTPOINT: &str = "--filter 'MOUNTPOINT'";
+const ARG_ALL_PARTITIONS: &str = "-no name -lp";
 const ARG_LIST_DRIVES: &str = "-dn -o NAME";
 const ARGS_LIST_DRIVES: [&str; 3] = str_split!(ARG_LIST_DRIVES, SPACE);
 
@@ -99,43 +98,40 @@ impl ListFromCommand {
     }
 
     pub fn mounted_partitions(path_drive: &Path) -> Vec<String> {
-        match Self::get_output_partitions_mounted(path_drive) {
+        let command_sh = format!(r#"{} {} {}? {}"#, LSBLK, ARG_MOUNTED_PARTITIONS, path_drive.display(), ARG_FILTER_MOUNTPOINT);
+        let output_command = Command::new(SH)
+            .arg(ARG_C)
+            .arg(command_sh.clone()) 
+            .output()
+            .unwrap_or_else(|e| panic!("{}{}\n{}", ERR_FAILED_EXECUTE_LSBLK, command_sh, e));
+
+        match String::from_utf8(output_command.stdout) {
             Ok(output) => { 
-                output.lines().filter_map(|e| { 
-                let paths = e.split_whitespace().collect::<Vec<_>>();  
-                match paths.len() { 
-                    2 => Some(String::from(paths[0])),
-                    _ => None,
-                }}).collect()
+                output.lines().map(|e| { 
+                String::from(e.trim())
+                }).collect()
             }
             _ => panic!("UtfError partitions mounted"),
         } 
     }
 
-    pub fn mounted_partition_numbers(path_drive: &Path) -> Vec<String> {
-        match Self::get_output_partitions_mounted(path_drive) {
-            Ok(output) => {
-                output.lines().filter_map(|e| { 
-                let paths = e.split_whitespace().collect::<Vec<_>>();   
-                match paths.len() { 
-                    2 => paths[0].strip_prefix(path_drive.to_str().unwrap()).map(String::from),
-                    _ => None,
-                }}).collect()
-            }
-            _ => panic!("UtfError partitions mounted"),
-        }
-    }
-
-    fn get_output_partitions_mounted(path_drive: &Path) -> Result<String, FromUtf8Error> {
-        let command_sh = format!(r#"{} {} {}?"#, LSBLK, ARG_MOUNTED_PARTITIONS, path_drive.display());
+    pub fn all_partition_numbers(path_drive: &Path) -> Vec<String> {
+        let command_sh = format!(r#"{} {} {}?"#, LSBLK, ARG_ALL_PARTITIONS, path_drive.display());
         let output_command = Command::new(SH)
             .arg(ARG_C)
             .arg(command_sh.clone())
             .output()
             .unwrap_or_else(|e| panic!("{}{}\n{}", ERR_FAILED_EXECUTE_LSBLK, command_sh, e));
-        String::from_utf8(output_command.stdout)
-    } 
-
+       
+        match String::from_utf8(output_command.stdout) {
+            Ok(output) => {
+                output.lines().map(|e| {
+                    String::from(e.trim().strip_prefix(path_drive.to_str().unwrap()).unwrap())
+                }).collect()
+            }
+            _ => panic!("UtfError partitions mounted"),
+        }
+    }
 
     pub fn timeregion() -> Vec<[String; 2]> {
         Self::find(Path::new(PATH_ZONEINFO), 
