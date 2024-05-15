@@ -15,6 +15,7 @@ use crate::shared::constants::install::{
     DIR_TMP,
     DIR_PKG_CACHE,
     DIR_PAC_PKG,
+    FILE_XZ_ARMTIX,
     PRIMARY,
 };
 
@@ -197,14 +198,14 @@ impl CommandAction {
         Some(cmd)
     }
 
-    pub fn extract_rootfs(file_loc: &str, dest_dir: &str) -> Option<Command> {
-        let mut end_dir = String::from(dest_dir);
-        end_dir.push_str(DIR_VAR_TMP);
-        match Path::new(&end_dir).exists() {
+    pub fn extract_rootfs(loc_file: &str, dir_dest: &str) -> Option<Command> {
+        let mut dir_end = String::from(dir_dest);
+        dir_end.push_str(DIR_VAR_TMP);
+        match Path::new(&dir_end).exists() {
             false => {
                 let mut cmd = Command::new(SUDO);
                 cmd.args(ARG_SH_C)
-                .arg(format!("{ASC_TAR} {file_loc} {ARGS_C} {dest_dir}"));
+                .arg(format!("{ASC_TAR} {loc_file} {ARGS_C} {dir_dest}"));
                 Some(cmd)
             },
             true => None,
@@ -444,15 +445,15 @@ impl CommandAction {
         Some(cmd)
     }
 
-    pub fn wget(path: &str, url_download: &str) -> Option<Command> {
-        match Path::new(path).exists() {
-            true => {
+    pub fn wget(dir_end: &str, url_download: &str) -> Option<Command> {
+        match Path::new(&format!("{dir_end}/{FILE_XZ_ARMTIX}")).exists() {
+            true => None,
+            false => {
                 let mut cmd = Command::new(SUDO);
-                cmd.current_dir(path);
+                cmd.current_dir(dir_end);
                 cmd.args([WGET, ARG_Q, url_download]);
                 Some(cmd)
             },
-            false => None,
         }
     }
 
