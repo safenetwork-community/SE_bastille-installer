@@ -9,21 +9,41 @@ use crate::shared::constants::char::SLASH;
 pub struct BuilderListCommand<'a> {
     device: &'a str,
     drive: &'a Path,
-    name_os: &'a str,
+    key_pub: &'a str,
+    keymap: &'a str,
+    locale: &'a str,
+    name_full: &'a str,
+    name_host: &'a str,
+    name_user: &'a str,
     partition_boot: PathBuf,
     partition_root: PathBuf,
-    password_user: &'a str
+    password_root: &'a str,
+    password_user: &'a str,
+    region_timezone: &'a str,
+    zone_timezone: &'a str
 }
 
 impl BuilderListCommand<'_> {
-    pub fn new<'a>(device: &'a str, drive: &'a Path, name_os: &'a str, password_user: &'a str) -> BuilderListCommand<'a> {
+    pub fn new<'a>(device: &'a str, name_user: &'a str, name_full: &'a str, 
+        password_user: &'a str, password_root: &'a str, key_pub: &'a str, 
+        drive: &'a Path,  keymap: &'a str, locale: &'a str, 
+        region_timezone: &'a str, zone_timezone: &'a str, 
+        name_host: &'a str) -> BuilderListCommand<'a> {
         BuilderListCommand {
             device,
             drive,
-            name_os,
+            key_pub,
+            keymap,
+            locale, 
+            name_full,
+            name_host,
+            name_user,
             partition_boot: Self::get_partition(drive, PART_BOOT), 
             partition_root: Self::get_partition(drive, PART_ROOT), 
-            password_user        
+            password_root,
+            password_user,
+            region_timezone,
+            zone_timezone
         }
     } 
 
@@ -38,13 +58,13 @@ impl BuilderListCommand<'_> {
                 (String::from(TXT_PARTPROBE), CommandAction::partprobe(self.drive)),
                 (String::from(TXT_MKVFAT), CommandAction::mkfs_vfat(self.drive, PART_BOOT)),
                 (String::from(TXT_MKBTRFS), CommandAction::mkfs_btrfs(self.drive, PART_ROOT)),
-                (String::from(TXT_MKDIR_MNTS), CommandAction::make_dirs(&[DIR_ROOT, DIR_BOOT])),
-                (String::from(TXT_MNT_MAINVOL_ROOT), CommandAction::mount_mainvol(&self.partition_root, DIR_ROOT)),
+                (String::from(TXT_MKDIR_MNTS), CommandAction::make_dirs(&[DIR_HG_ROOT, DIR_HG_BOOT])),
+                (String::from(TXT_MNT_MAINVOL_ROOT), CommandAction::mount_mainvol(&self.partition_root, DIR_HG_ROOT)),
                 (String::from(TXT_MKSUBVOL_ROOT), CommandAction::make_subvol(Path::new(DIR_SV_ROOT))),
                 (String::from(TXT_MKSUBVOL_HOME), CommandAction::make_subvol(Path::new(DIR_SV_HOME))),
                 (String::from(TXT_UMOUNT_ROOT), CommandAction::umount(&self.partition_root)),
                 (String::from(TXT_MNT_SUBVOLS), CommandAction::mount_subvols(&self.partition_root, &SUBVOLS_PART_ROOT)),
-                (String::from(TXT_MNT_BOOT), CommandAction::mount(&self.partition_boot, DIR_BOOT)),
+                (String::from(TXT_MNT_BOOT), CommandAction::mount(&self.partition_boot, DIR_HG_BOOT)),
             ],
             _ => vec![],
         }
@@ -53,41 +73,47 @@ impl BuilderListCommand<'_> {
     pub fn install_os(&self) -> Vec<(String, Option<Command>)> {
         match self.device {
             "rpi4" => vec![ 
-                (format!("{TXT_DOWNLOAD_OS} {}{DOTS}", self.name_os), 
-                    CommandAction::wget(DIR_TMP, format!("{URL_ARMTIX_DL}{FILE_XZ_ARMTIX}").as_str())),
-                (String::from(TXT_EXTRACTING_OS), CommandAction::extract_rootfs(format!("{DIR_TMP}{SLASH}{FILE_XZ_ARMTIX}").as_str(), DIR_ROOT)),
-                (String::from(TXT_KEYRINGS), CommandAction::setup_keyrings(DIR_ROOT)),
-                (String::from(TXT_LIST_MIRROR), CommandAction::set_list_mirror(DIR_ROOT)),
-                (String::from(TXT_PACKAGES), CommandAction::install_packages(DIR_ROOT)),
-                (String::from(TXT_SERVICES_ROOT), CommandAction::enable_services_root(DIR_ROOT)),
-                (String::from(TXT_OVERLAY), CommandAction::apply_overlay()),
-                (String::from(TXT_USERS), CommandAction::add_users(DIR_ROOT, self.password_user)),
-                (String::from(TXT_SERVICES_USER), CommandAction::enable_services_user()),
-                (String::from(TXT_SETTINGS_SYSTEM), CommandAction::set_settings_system()),
-                (String::from(TXT_PERMISSIONS), CommandAction::set_settings_system()),
-                (String::from(TXT_SUPPORT_BTRFS), CommandAction::add_support_btrfs())
+                (String::from(TXT_DOWNLOAD_OS), CommandAction::wget(DIR_MNT, format!("{URL_ARMTIX_DL}{FILE_XZ_ARMTIX}").as_str())),
+                (String::from(TXT_EXTRACTING_OS), CommandAction::extract_rootfs(format!("{DIR_MNT}{SLASH}{FILE_XZ_ARMTIX}").as_str(), DIR_HG_ROOT)),
+                (String::from(TXT_BR_ARCH_GAP), CommandAction::bridge_arch_gap())
             ],
             _ => vec![],
         }
     }
 
-/*
     pub fn install_bootloader(&self) -> Vec<(String, Option<Command>)> { 
         match self.device {
             "rpi4" => vec![
-                (String::from(TXT_DOWNLOAD_BOOTLOADER), CommandAction::git_clone(DIR_TMP, format!("{GIT_BOOTLOADER}").as_str())),
-                (String::from(TXT_BUILD_BOOTLOADER), CommandAction::build_bootloader())
-                (String::from(TXT_INSTALL_BOOTLOADER), CommandAction::install_bootloader())
+                (String::from(TXT_INSTALL_BOOTLOADER_BUILDER), CommandAction::eqstalx_packages(DEFAULT_BOOTLOADER)),
+                (String::from(TXT_INSTALL_BOOTLOADER), CommandAction::eqstalx_bootloader()),
+                (String::from(TXT_FSTAB), CommandAction::zjenx_fstab())
             ],
             _ => vec![],
         }
     }
-*/
+
+    pub fn setup_os(&self) -> Vec<(String, Option<Command>)> {
+        match self.device {
+            "rpi4" => vec![ 
+                (String::from(TXT_PACKAGES_UPDATE), CommandAction::update_packages()),
+                (String::from(TXT_PACKAGES_INSTALL), CommandAction::eqstalx_packages(DEFAULT_PACKAGES)),
+                (String::from(TXT_PACKAGE_FS), CommandAction::eqstalx_fs()),
+                (String::from(TXT_USERS), CommandAction::set_users(self.name_user, self.name_full, 
+                self.password_user, self.password_root, self.key_pub)),
+                (String::from(TXT_REZOSUR), CommandAction::azjx_rezosur()),
+                (String::from(TXT_EDITOR), CommandAction::azjx_editor()),
+                (String::from(TXT_SETTINGS_SYSTEM), CommandAction::set_settings_system(
+                self.region_timezone, self.zone_timezone, self.locale, self.keymap, self.name_host)),
+            ],
+            _ => vec![],
+        }
+    }
+
     pub fn cleanup(&self) -> Vec<(String, Option<Command>)> { 
         match self.device {
             "rpi4" => vec![
-                (String::from(TXT_CLEAN_INSTALL), CommandAction::clean_up_install(ARCH)),
-                (String::from(TXT_UMOUNT_DIRS), CommandAction::umount_dirs(&[DIR_HOME, DIR_ROOT, DIR_BOOT])),
+                (String::from(TXT_CLEAN_INSTALL), CommandAction::clean_up_install(DEFAULT_ARCH)),
+                (String::from(TXT_UMOUNT_DIRS), CommandAction::umount_dirs(&[DIR_HG_BOOT, DIR_HG_HOME, DIR_HG_ROOT])),
                 (String::from(TXT_PARTPROBE), CommandAction::partprobe(self.drive))
             ],
             _ => vec![]
@@ -95,9 +121,10 @@ impl BuilderListCommand<'_> {
     }
 
     pub fn build(self) -> Vec<(String, Option<Command>)> {
-        let mut builder = Vec::new();
+        let mut builder = self.prepare();
         builder.extend(self.install_os());
-        // builder.extend(self.install_bootloader());
+        builder.extend(self.install_bootloader());
+        builder.extend(self.setup_os());
         builder.extend(self.cleanup());
         builder
     }
@@ -105,6 +132,8 @@ impl BuilderListCommand<'_> {
     pub fn build_2(self) -> Vec<(String, Option<Command>)> {
         let mut builder = self.prepare();
         builder.extend(self.install_os());
+        // builder.extend(self.install_bootloader());
+        builder.extend(self.setup_os());
         builder.extend(self.cleanup());
         builder
     }

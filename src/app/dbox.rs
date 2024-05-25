@@ -82,7 +82,7 @@ impl HandlerPage for BoxMenuDevice<'_> {
 
     fn next(&self) -> Page {
         match self.single_edit {
-            false => Page::MenuOperatingSystem,
+            false => Page::MenuDrive,
             true => Page::MenuConfig,
         }
     }
@@ -94,52 +94,6 @@ impl HandlerPage for BoxMenuDevice<'_> {
         }
     }
 }
-
-pub struct BoxMenuOperatingSystem<'a> {
-    pub name_os: &'a mut String,
-    pub single_edit: bool,
-}
-
-
-impl HandlerBox for BoxMenuOperatingSystem<'_> {
-
-    fn handle(&mut self) -> Page {
-        match BoxMenu::choice(BoxTypeMenu::Default, self.get_text(), 
-            BoxMenu::convert_string_list_to_dbox_list(LIST_MENU_OS)) {
-            (Choice::Yes, Some(os)) => {
-                *self.name_os = os;
-                self.next()
-            },
-            (Choice::Yes, None) => Page::EmptyMenu,
-            (Choice::Escape, _) => Page::Escape,
-            (Choice::Cancel, _) => self.previous(),
-            _ => Page::NotFoundBox,
-        }
-    }
-     
-    fn get_text(&self) -> String {
-        TextMenuOperatingSystem {}.to_string()
-    }
-}
-
-impl HandlerPage for BoxMenuOperatingSystem<'_> {
-
-    fn next(&self) -> Page {
-        match self.single_edit {
-            false => Page::MenuDrive,
-            true => Page::MenuConfig,
-        }
-    }
-
-    fn previous(&self) -> Page {
-        match self.single_edit {
-            false => Page::MenuDevice,
-            true => Page::MenuConfig,
-        }
-    }
-}
-
-
 
 pub struct BoxMenuDrive<'a> {
     pub name_drive: &'a mut String,
@@ -178,7 +132,7 @@ impl HandlerPage for BoxMenuDrive<'_> {
 
     fn previous(&self) -> Page {
         match self.single_edit {
-            false => Page::MenuOperatingSystem,
+            false => Page::MenuDevice,
             true => Page::MenuConfig,
         }
     }

@@ -43,10 +43,6 @@ pub const LIST_MENU_DEVICE: &[[&str; 2]] = &[
     ["Raspberry Pi 4", EMPTY], 
 ];
 
-pub const LIST_MENU_OS: &[[&str; 2]] = &[
-    ["Artix", EMPTY], 
-];
-
 pub const LIST_MENU_MAIN: &[(&str, Page)] = &[
     ("Wizard Config", Page::MenuDevice), 
     ("Manual Config", Page::MenuConfig), 
@@ -58,7 +54,6 @@ pub const LIST_MENU_MAIN: &[(&str, Page)] = &[
 
 pub const LIST_MENU_CONFIG: &[(&str, Page)] = &[
     ("select device", Page::MenuDevice),
-    ("select Operating System", Page::MenuOperatingSystem),
     ("enter username", Page::InputUsername),
     ("enter usergroups", Page::InputUsergroups),
     ("enter fullname", Page::InputFullname),

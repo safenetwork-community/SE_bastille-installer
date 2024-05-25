@@ -11,13 +11,7 @@ use crate::shared::constants::char::{
     CHAR_X, SEMI_COLON
 };
 
-use crate::shared::constants::install::{
-    DIR_TMP,
-    DIR_PKG_CACHE,
-    DIR_PAC_PKG,
-    FILE_XZ_ARMTIX,
-    PRIMARY,
-};
+use crate::shared::constants::install::*;
 
 // General commands
 const ARTIX_CHROOT: &str = "artix-chroot";
@@ -25,7 +19,14 @@ const TAR: &str = "tar";
 const BTRFS: &str = "btrfs";
 const CAT: &str = "cat";
 const CLEAR: &str = "clear";
+const CURL: &str = "curl";
 const DD: &str = "dd";
+const ECHO: &str = "echo";
+const FSTABGEN: &str = "fstabgen";
+const GROUPMOD: &str = "groupmod";
+const INSTALL: &str = "install";
+const LN: &str = "ln";
+const LOCALE_GEN: &str = "locale-gen";
 const MKDIR: &str = "mkdir";
 const MKFS_BTRFS: &str = "mkfs.btrfs";
 const MKFS_VFAT: &str = "mkfs.vfat";
@@ -33,20 +34,31 @@ const MKLABEL: &str = "mklabel";
 const MKPART: &str = "mkpart";
 const MOUNT: &str = "mount";
 const PACMAN: &str = "pacman";
-const PACMAN_KEY: &str = "pacman-key";
+// const PACMAN_KEY: &str = "pacman-key";
 const PARTED: &str = "parted";
 const PARTPROBE: &str = "partprobe";
 const RM: &str = "rm";
+const SED: &str = "sed";
 const SETUP_KEYMAP: &str = "setup-keymap";
+const SYSLINUX_INSTALL_UPDATE: &str = "syslinux-install_update";
+const TEE: &str = "tee";
+const TRUE: &str = "true";
 const UMOUNT: &str = "umount";
-const USERADD: &str = "useradd";
+const USERMOD: &str = "usermod";
 const WGET: &str = "wget";
 
 // general arguments
 const ARG_A: &str = "-a";
+const ARG_D: &str = "-d";
+const ARG_E: &str = "-e";
 const ARG_F: &str = "-f";
-const ARG_F10: &str = "-f10";
+const ARG_I: &str = "-i";
+const ARG_L: &str = "-l";
 const ARG_M: &str = "-m";
+const ARG_MOD600: &str = "-m600";
+const ARG_MOD644: &str = "-m644";
+const ARG_MOD700: &str = "-m700";
+const ARG_MOD755: &str = "-m755";
 const ARG_N: &str = "-n";
 const ARG_O: &str = "-o";
 const ARG_P: &str = "-p";
@@ -56,105 +68,122 @@ const ARG_S: &str = "-s";
 const ARGS_C: &str = "-C";
 const ARGS_G: &str = "-G";
 const ARGS_L: &str = "-L";
+const ARGS_S: &str = "-S";
+const ARGS_U: &str = "-U";
 const ARGS_SYYU: &str = "-Syyu";
-const ARL_INIT: &str = "--init";
+
+// long arguments
+// const ARL_INIT: &str = "--init";
+const ARL_DIR: &str = "--directory";
+const ARL_GROUP: &str = "--group=";
 const ARL_NOCONFIRM: &str = "--noconfirm";
-const ARL_POPULATE: &str = "--populate";
+// const ARL_POPULATE: &str = "--populate";
+const ARL_OWNER: &str = "--owner=";
 
 // command specific arguments
-const ARTIX_ARM: &str = "artixarm";
-const BASE: &str = "base";
+// const ARTIX_ARM: &str = "artixarm";
 const BS_1M: &str = "bs=1M";
-const CONMAN_DINIT: &str = "conman-dinit";
 const COUNT_32: &str = "count=32";
-const DINIT: &str = "dinit";
-const ENABLE: &str = "enable";
-const GETTY_TARGET: &str = "getty.target";
+const EOF: &str = "EOF";
 const GPT: &str = "gpt";
 const C_PERCENT: &str = "100%";
-const LABEL_BOOT: &str = "BOOT_BASTIJ";
-const LABEL_ROOT: &str = "ROOT_BASTIJ";
+const IF_DEV_ZERO: &str = "if=/dev/zero";
+const FILE_LITERAL: &str = "<<";
+const MAIN_VOL_COMPRESS: &str = "compress=zstd";
 const OPTIMAL: &str = "optimal";
-const PACMAN_MIRRORS: &str = "pacman-mirrors";
+const ROOT: &str = "root";
 const SINGLE: &str = "single";
 const SIZE: &str = "size";
 const START: &str = "start";
-const STR_AND: &str = "&";
-const MAIN_VOL_COMPRESS: &str = "compress=zstd";
-const SUB_VOL_COMPRESS: &str = "${MAIN_VOL_COMPRESS},subvol=";
-const UBOOT_RASPBERRY_PI: &str = "uboot-raspberrpi";
-const WHEEL: &str = "wheel";
-const IF_DEV_ZERO: &str = "if=/dev/zero";
+const SUB_VOL_COMPRESS: &str = formatcp!("{MAIN_VOL_COMPRESS},subvol=");
 
-// argument character strings
+// reg expressions
+const REX_HD: &str = "'s/\\s*\\([\\+0-9a-zA-Z]*\\).*/\\1/'";
 
-// dirs
-const CLEANUP_DIRS: [&str; 10] = [
-    formatcp!("{UMOUNT} {DIR_TMP}/root/var/cache/pacman/pkg"),
-    formatcp!("{RM} {ARG_R} {ARG_F} {DIR_TMP}/root/usr/bin/qemu-aarch64-static"),
-    formatcp!("{RM} {ARG_R} {ARG_F} {DIR_TMP}/root/var/cache/packman/pkg/*"),
-    formatcp!("{RM} {ARG_R} {ARG_F} {DIR_TMP}/root/var/log/*"),
-    formatcp!("{RM} {ARG_R} {ARG_F} {DIR_TMP}/root/etc/*.pacnew"),
-    formatcp!("{RM} {ARG_R} {ARG_F} {DIR_TMP}/root/usr/lib/systemd/system/systemd-firstboot.service"),
-    formatcp!("{RM} {ARG_R} {ARG_F} {DIR_TMP}/root/etc/machine-id"),
-    formatcp!("{RM} {ARG_R} {ARG_F} {DIR_TMP}/user"),
-    formatcp!("{RM} {ARG_R} {ARG_F} {DIR_TMP}/password"),
-    formatcp!("{RM} {ARG_R} {ARG_F} {DIR_TMP}/rootpassword"),
+// cleanup dirs
+pub const CLEANUP_DIRS: [&str; 10] = [
+    formatcp!("{UMOUNT} {DIR_MNT}/root/var/cache/pacman/pkg"),
+    formatcp!("{RM} {ARG_R} {ARG_F} {DIR_MNT}/root/usr/bin/qemu-aarch64-static"),
+    formatcp!("{RM} {ARG_R} {ARG_F} {DIR_MNT}/root/var/cache/packman/pkg/*"),
+    formatcp!("{RM} {ARG_R} {ARG_F} {DIR_MNT}/root/var/log/*"),
+    formatcp!("{RM} {ARG_R} {ARG_F} {DIR_MNT}/root/etc/*.pacnew"),
+    formatcp!("{RM} {ARG_R} {ARG_F} {DIR_MNT}/root/usr/lib/systemd/system/systemd-firstboot.service"),
+    formatcp!("{RM} {ARG_R} {ARG_F} {DIR_MNT}/root/etc/machine-id"),
+    formatcp!("{RM} {ARG_R} {ARG_F} {DIR_MNT}/user"),
+    formatcp!("{RM} {ARG_R} {ARG_F} {DIR_MNT}/password"),
+    formatcp!("{RM} {ARG_R} {ARG_F} {DIR_MNT}/rootpassword"),
 ];
-const SYS_BLOCK: &str = "/sys/block";
-const DIR_VAR_TMP: &str = "/var/tmp";
-
-// general sh arguments
-//const ASC_QUIET: &str = formatcp!("{ONE_G} {DEV_NULL} {TWO_GN_ONE}");
-const ASC_QUIET: &str = formatcp!("");
 
 // sh arguments
 const ASC_BOOT_SPACE: &str = "32M 512M";
 const ASC_BTRFS_SUCR: &str = formatcp!("{BTRFS} su cr");
-const ASC_CAT_SB: &str = formatcp!("{CAT} {SYS_BLOCK}");
+const ASC_CAT_SB: &str = formatcp!("{CAT} {DIR_SYS_BLOCK}");
 const ASC_END_SECTOR: &str = "\"${END_SECTOR}s\"";
 const ASC_MKDIR_P: &str = formatcp!("{MKDIR} {ARG_P}");
 const ASC_MKLABEL_GPT: &str = formatcp!("{MKLABEL} {GPT}");
 const ASC_MKPART_PRIMARY: &str = formatcp!("{MKPART} {PRIMARY}");
 const ASC_MOUNT_O: &str = formatcp!("{MOUNT} {ARG_O}");
-const ASC_PACMAN_KEY_INIT: &str = formatcp!("{PACMAN_KEY} {ARL_INIT} {ASC_QUIET}");
-const ASC_PACMAN_KEY_POPULATE: &str = formatcp!("{PACMAN_KEY} {ARL_POPULATE} {ARTIX_ARM} {ASC_QUIET}");
+// const ASC_PACMAN_KEY_INIT: &str = formatcp!("{PACMAN_KEY} {ARL_INIT}");
+// const ASC_PACMAN_KEY_POPULATE: &str = formatcp!("{PACMAN_KEY} {ARL_POPULATE} {ARTIX_ARM}");
 const ASC_PARTED_OPT: &str = formatcp!("{PARTED} {ARG_A} {OPTIMAL} {ARG_S}");
 const ASC_PARTED_S: &str = formatcp!("{PARTED} {ARG_S}");
 const ASC_TAR: &str = formatcp!("{TAR} {CHAR_X} {ARG_F}");
 
-// slice arguments 
-const ASCS_DINIT_E: [&str; 3] = [DINIT, ENABLE, GETTY_TARGET];
+// sh hg arguments
+const AHG_BOOTLOADER_INSTALL: &str = formatcp!("{ARTIX_CHROOT} {DIR_HG_ROOT} {SYSLINUX_INSTALL_UPDATE} {ARG_I} {ARG_A} {ARG_M}");
+const AHG_PACMAN_INSTALL: &str = formatcp!("{ARTIX_CHROOT} {DIR_HG_ROOT} {PACMAN} {ARGS_S} {ARL_NOCONFIRM}");
+const AHG_PACMAN_UPDATE: &str = formatcp!("{ARTIX_CHROOT} {DIR_HG_ROOT} {PACMAN} {ARGS_SYYU} {ARL_NOCONFIRM}");
+const AHG_FSTABGEN: &str = formatcp!("{FSTABGEN} {ARGS_U} {DIR_HG_ROOT} | {TEE} {ARG_A} {LOC_FSTAB}");
+const AHG_RM_STS: &str = formatcp!("{ARTIX_CHROOT} {DIR_HG_ROOT} {RM} {LOC_MKINITCPIO_STS}");
 
+// sh multiline arguments
+const ASML_LUNARVIM: &str = formatcp!("{ARTIX_CHROOT} {DIR_HG_ROOT} {SED} {ARG_E} {REX_HD} {ASC_QUIET} {FILE_LITERAL} {EOF}\n \
+        | LV_BRANCH='lelease-1.3/neovim-0.9'\n \
+        {CURL} {ARG_S} {DEFAULT_URL_EDITOR}\n \
+        | bash\n \
+        n\n \
+        n\n \
+        y\n \
+        {EOF}");
+// const ASML_PACMAN_KEY: &str = formatcp!("{ARTIX_CHROOT} {DIR_HG_ROOT} {ASC_PACMAN_KEY_INIT}; \
+//            {ARTIX_CHROOT} {DIR_HG_ROOT} {ASC_PACMAN_KEY_POPULATE}");
+const ASML_EQSTALX_FS: &str = formatcp!("{AHG_RM_STS};{AHG_PACMAN_INSTALL} {DEFAULT_PACKAGE_FS}");
+const ASC_INSTALL_QEMU_STATIC: &str = formatcp!("{INSTALL} {ARG_MOD755} {ARGS_C} {LOC_QEMU_USER_STATIC} {LOC_HG_QEMU_USER_STATIC}; \
+        {CAT} {LOC_BINFMT_AARCH64} | {TEE} {LOC_BINFMT_REGISTER}\
+");
 
 #[derive(Clone, Copy)]
 pub struct CommandAction {}
     
 impl CommandAction {
-/*
-    pub fn add_bootloader() -> Option<Command> {
+
+    pub fn azjx_editor() -> Option<Command> {
         let mut cmd = Command::new(SUDO);
-        cmd.arg("echo");
-        Some(cmd)
-    }
-*/
-    pub fn apply_overlay() -> Option<Command> {
-        let mut cmd = Command::new(SUDO);
-        cmd.arg("echo");
+        cmd.args(ARG_SH_C)
+        .arg(ASML_LUNARVIM);
         Some(cmd)
     }
 
-
-    pub fn add_support_btrfs() -> Option<Command> {
-        let mut cmd = Command::new(SUDO);
-        cmd.args(["echo"]);
-        Some(cmd)
+    pub fn azjx_rezosur() -> Option<Command> {
+        Some(Command::new(TRUE))
     }
 
-    pub fn add_users(dir: &str, password_user: &str) -> Option<Command> {
+    pub fn eqstalx_bootloader() -> Option<Command> {
         let mut cmd = Command::new(SUDO);
-        cmd.args([ARTIX_CHROOT, dir, USERADD, ARG_M, ARGS_G, WHEEL, ARG_P, password_user])
-        .arg(STR_AND);
+        cmd.args(ARG_SH_C).arg(AHG_BOOTLOADER_INSTALL);
+        Some(cmd)
+    }
+ 
+    pub fn eqstalx_packages(packages: &str) -> Option<Command> {
+        let mut cmd = Command::new(SUDO);
+        cmd.args(ARG_SH_C).arg(format!("{AHG_PACMAN_INSTALL} {packages}"));
+        Some(cmd)
+    }
+    
+    pub fn bridge_arch_gap() -> Option<Command> {
+        let mut cmd = Command::new(SUDO);
+        cmd.args(ARG_SH_C);
+        cmd.arg(ASC_INSTALL_QEMU_STATIC);
         Some(cmd)
     }
 
@@ -166,7 +195,7 @@ impl CommandAction {
             command_sh.push_str(dir); 
             command_sh.push(SEMI_COLON);
         }
-        command_sh.push_str(format!("{RM} {ARG_R} {ARG_F} {DIR_TMP}/Manjaro-ARM-{arch}-latest.tar.gz*").as_str());
+        command_sh.push_str(format!("{RM} {ARG_R} {ARG_F} {DIR_MNT}/Manjaro-ARM-{arch}-latest.tar.gz*").as_str());
         cmd.arg(command_sh);
         Some(cmd)
     }
@@ -180,21 +209,6 @@ impl CommandAction {
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C);
         cmd.arg(format!("{DD} {IF_DEV_ZERO} of={dis_drive} {BS_1M} {COUNT_32} {ASC_QUIET}"));
-        Some(cmd)
-    }
- 
-    pub fn enable_services_root(dir: &str) -> Option<Command> {
-        let mut cmd = Command::new(SUDO);
-        cmd.arg(ARTIX_CHROOT)
-        .arg(dir)
-        .args(ASCS_DINIT_E)
-        .args(ASCS_QUIET);
-        Some(cmd)
-    }
-
-    pub fn enable_services_user() -> Option<Command> {
-        let mut cmd = Command::new(SUDO);
-        cmd.args(["echo"]);
         Some(cmd)
     }
 
@@ -212,33 +226,12 @@ impl CommandAction {
         }
     }
 
-
-    pub fn install_packages(dir: &str) -> Option<Command> {
-        let dir: &Path = Path::new(dir);
+    pub fn update_packages() -> Option<Command> {
         let mut cmd = Command::new(SUDO);
-        cmd.args(ARG_SH_C);
-        let command_sh = format!(
-            r#"
-            {MKDIR} {ARG_P} {DIR_PKG_CACHE}; \ 
-            {MKDIR} {ARG_O} {DIR_PKG_CACHE} {DIR_PAC_PKG}; \
-            {ARTIX_CHROOT} {} {PACMAN} {ARGS_SYYU} \
-            {BASE} {UBOOT_RASPBERRY_PI} {CONMAN_DINIT} \
-            {ARL_NOCONFIRM}
-        "#, dir.display());
-        cmd.arg(command_sh);
+        cmd.args(ARG_SH_C).arg(AHG_PACMAN_UPDATE);
         Some(cmd)
     }
 
-    /*
-    pub fn make_dir(dir: &str) -> Option<Command> {
-        let mut cmd = Command::new(SUDO);
-        cmd.args(ARG_SH_C)
-        .arg(format!("{ASC_MKDIR_P} {}", 
-            Path::new(dir).display()));
-        Some(cmd)
-    }
-    */
-    
     pub fn make_dirs(dirs: &[&str]) -> Option<Command> {
         let dirs: Vec<&Path> = dirs.iter().filter_map(|dir| {
             let dir = Path::new(dir);
@@ -267,15 +260,14 @@ impl CommandAction {
     pub fn make_label(drive: &Path) -> Option<Command> {
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C)
-        .arg(format!("{} {} {} {}", ASC_PARTED_S, drive.display(), ASC_MKLABEL_GPT, ASC_QUIET));
+        .arg(format!("{ASC_PARTED_S} {} {ASC_MKLABEL_GPT} {ASC_QUIET}", drive.display()));
         Some(cmd)
     }
 
     pub fn make_boot_partition(drive: &Path, partition_type: &str) -> Option<Command> { 
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C)
-        .arg(format!("{} {} {} {} {}{}", ASC_PARTED_OPT, drive.display(), ASC_MKPART_PRIMARY, 
-            partition_type, ASC_BOOT_SPACE, ASC_QUIET));
+        .arg(format!("{ASC_PARTED_OPT} {} {ASC_MKPART_PRIMARY} {partition_type} {ASC_BOOT_SPACE} {ASC_QUIET}", drive.display()));
         Some(cmd)
     }
 
@@ -308,7 +300,7 @@ impl CommandAction {
     pub fn mkfs_btrfs(drive: &Path, partition: u32) -> Option<Command> {
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C)
-        .arg(format!("{MKFS_BTRFS} {ARG_M} {SINGLE} {ARGS_L} {LABEL_ROOT} {ARG_F} {}{partition} {ASC_QUIET}", drive.display()));
+        .arg(format!("{MKFS_BTRFS} {ARG_M} {SINGLE} {ARGS_L} {LABEL_ROOT_AND_HOME} {ARG_F} {}{partition} {ASC_QUIET}", drive.display()));
         Some(cmd)
     }
 
@@ -386,30 +378,59 @@ impl CommandAction {
         }
     }
 
-    pub fn set_settings_system() -> Option<Command> {
+    pub fn eqstalx_fs() -> Option<Command> {
         let mut cmd = Command::new(SUDO);
-        cmd.args(["echo"]);
+        cmd.args(ARG_SH_C).arg(ASML_EQSTALX_FS);
         Some(cmd)
     }
 
-    pub fn set_list_mirror(dir: &str) -> Option<Command> {
-        let mut cmd = Command::new(SUDO);
-        cmd.args([ARTIX_CHROOT, dir, PACMAN_MIRRORS, ARG_F10, ASC_QUIET]);
-        Some(cmd)
-    }
-
-    pub fn setup_keyrings(dir: &str) -> Option<Command> { 
+    pub fn set_settings_system(region_timezone: &str, zone_timezone: &str, locale: &str, keymap: &str, name_host: &str) -> Option<Command> {
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C)
-        .arg(format!("{ARTIX_CHROOT} {dir} {ASC_PACMAN_KEY_INIT}{SEMI_COLON} \
-            {ARTIX_CHROOT} {dir} {ASC_PACMAN_KEY_POPULATE}"));
+        .arg(format!("{ARTIX_CHROOT} {DIR_HG_ROOT} {LN} {ARG_S} {ARG_F} /usr/share/zoneinfo/timezone/{region_timezone}/{zone_timezone} /etc/localtime; \
+        {ARTIX_CHROOT} {DIR_HG_ROOT} {SED} {ARG_I} s/\"#{locale}\"/\"{locale}\"/g {LOC_LOCALE_GEN}; \
+        {ARTIX_CHROOT} {DIR_HG_ROOT} {ECHO} \"LOCALE={locale}\" | {TEE} {ARG_A} {LOC_LOCALE_CONF}; \
+        {ARTIX_CHROOT} {DIR_HG_ROOT} {LOCALE_GEN} \
+        {ARTIX_CHROOT} {DIR_HG_ROOT} {ECHO} \"KEYMAP={keymap}\nFONT={DEFAULT_CONSOLEFONT}\" | {TEE} {ARG_A} {LOC_VCONSOLE_CONF}; \
+        {ARTIX_CHROOT} {DIR_HG_ROOT} {LOCALE_GEN} \
+        {ARTIX_CHROOT} {DIR_HG_ROOT} {name_host} | {TEE} {ARG_A} {LOC_HOSTNAME} \
+        "));
         Some(cmd)
     }
 
-    pub fn _show_elapsed_time() -> Option<Command> {
-        let mut cmd = Command::new("sleep");
-        cmd.arg("0.1");
+    pub fn set_users(user: &str, name_full: &str, password_user: &str, password_root: &str, key_pub_user: &str) -> Option<Command> {
+        let mut cmd = Command::new(SUDO);
+        cmd.args(ARG_SH_C)
+        .arg(format!("{ARTIX_CHROOT} {DIR_HG_ROOT} {GROUPMOD} {ARG_N} {user} {DEFAULT_USERGROUP_USER}; \
+        {ARTIX_CHROOT} {DIR_HG_ROOT} {USERMOD} {ARG_A} {ARGS_G} \
+        {DEFAULT_USERGROUPS} {ARG_P} {password_user} {ARG_S} {DEFAULT_SHELL} \
+        {ARG_L} {user} {ARG_C} {name_full} {ARG_M} {ARG_D} /home/{user} {DEFAULT_USERNAME}; \
+        {INSTALL} {ARL_DIR} {ARL_OWNER}{user} {ARL_GROUP}{user} {ARG_MOD700} {DIR_HG_ROOT}/home/{user}/.ssh; \
+        {INSTALL} {ARL_OWNER}{user} {ARL_GROUP}{user} {ARG_MOD600} {DIR_HG_ROOT}/home/{user}/authorized_keys; \
+        {ECHO} {DIR_HG_ROOT}/.ssh/{key_pub_user} | {TEE} {ARG_A} {DIR_HG_ROOT}/home/{user}/authorized_keys {ASC_QUIET}; \
+        {INSTALL} {ARL_OWNER}{user} {ARL_GROUP}{user} {ARG_MOD644} {LOC_PROFILE} {DIR_HG_ROOT}/home/{user}/.profile; \
+        {ARTIX_CHROOT} {DIR_HG_ROOT} {USERMOD} {ARG_P} {password_root} {ROOT} \
+        "));
         Some(cmd)
+    }
+
+    pub fn setup_keymap(keymap: &str, keyvar: &str) -> Option<Command> {
+        let mut cmd = Command::new(SUDO);
+        cmd.arg(SETUP_KEYMAP).arg(keymap).arg(keyvar);
+        Some(cmd)
+    }
+
+    /*
+    pub fn setup_keyrings() -> Option<Command> { 
+        let mut cmd = Command::new(SUDO);
+        cmd.args(ARG_SH_C)
+        .arg(ASML_PACMAN_KEY);
+        Some(cmd)
+    }
+    */
+
+    pub fn _show_elapsed_time() -> Option<Command> {
+        Some(Command::new(TRUE))
     }
     
     pub fn umount(path: &Path) -> Option<Command> {
@@ -457,11 +478,9 @@ impl CommandAction {
         }
     }
 
-    pub fn setup_keymap(keymap: &str, keyvar: &str) -> Option<Command> {
+    pub fn zjenx_fstab() -> Option<Command> {
         let mut cmd = Command::new(SUDO);
-        cmd.arg(SETUP_KEYMAP)
-        .arg(keymap)
-        .arg(keyvar);
+        cmd.args(ARG_SH_C).arg(AHG_FSTABGEN);
         Some(cmd)
     }
 }

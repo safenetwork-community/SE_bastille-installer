@@ -20,13 +20,14 @@ pub const MSG_EXIT_QUIT: &str =     "Quit pressed, exiting..";
 
 pub struct App {
     groups_user: String,
+    key_pub: String,
+    locale: String,
     map_key_guest: String,
     map_key_host: String, 
     msg_error: String,
     name_device: String,
     name_drive: String,
     name_host: String,
-    name_os: String,
     name_user: String,
     name_full: String,
     password_user: String,
@@ -45,6 +46,8 @@ impl App {
     pub fn new() -> Self {
         App {
             groups_user: String::new(),
+            key_pub: String::new(),
+            locale: String::new(),
             map_key_guest: String::new(),
             map_key_host: String::new(),
             msg_error: String::new(),
@@ -52,7 +55,6 @@ impl App {
             name_drive: String::new(),
             name_full: String::new(),
             name_host: String::new(),
-            name_os: String::new(), 
             name_user: String::new(),
             var_key_guest: String::new(),
             var_key_host: String::new(),
@@ -140,13 +142,6 @@ impl App {
         }
     }
 
-    fn get_box_menu_name_os(&mut self) -> BoxMenuOperatingSystem {
-        BoxMenuOperatingSystem {
-            name_os: &mut self.name_os,
-            single_edit: self.single_edit,
-        }
-    }
-
     fn get_box_menu_region_timezone(&mut self) -> BoxMenuTimezoneRegion {
         BoxMenuTimezoneRegion {
             single_edit: self.single_edit,
@@ -202,7 +197,7 @@ impl App {
 
     fn get_box_mixed_gauge_installation(&mut self) -> BoxGaugeInstallation {
 
-        let list_command: Vec<(String, Option<Command>)> = Self::get_list_installation_2(self);             
+        let list_command: Vec<(String, Option<Command>)> = Self::get_list_installation(self);             
 
         BoxGaugeInstallation {
             list_command,
@@ -211,19 +206,20 @@ impl App {
     }
 
     fn get_box_mixed_gauge_test_installation(&mut self) -> BoxGaugeInstallation {
-        self.map_key_guest = String::from("yr");
+        self.key_pub = String::from("id_pjehrsohmehj_folaht.pub");
+        self.locale = String::from("be_FR.utf8");
         self.name_drive = String::from("sda");
         self.name_device = String::from("rpi4");
         self.name_full = String::from("Fôlat Pjêrsômêj");
         self.name_host = String::from("Rezosur-uq");
-        self.name_os = String::from("Artix");
         self.name_user = String::from("folaht");
-        self.password_user = String::from("ellAellaeEe11");
+        self.password_root = String::from("mopahsrasin");
+        self.password_user = String::from("mopahs");
         self.region_timezone = String::from("Europe");
         self.var_key_guest = String::from("yr-af");
         self.zone_timezone = String::from("Amsterdam");
 
-        let list_command: Vec<(String, Option<Command>)> = Self::get_list_installation(self);             
+        let list_command: Vec<(String, Option<Command>)> = Self::get_list_installation_2(self);             
 
         BoxGaugeInstallation {
             list_command,
@@ -279,7 +275,6 @@ impl App {
                 Page::MenuKeymapHost => current_box = Self::get_box_menu_map_key_host(self).handle(),
                 Page::MenuKeyvarGuest => current_box = Self::get_box_menu_var_key_guest(self).handle(),
                 Page::MenuKeyvarHost => current_box = Self::get_box_menu_var_key_host(self).handle(),
-                Page::MenuOperatingSystem => current_box = Self::get_box_menu_name_os(self).handle(),
                 Page::MenuTimezoneRegion => current_box = Self::get_box_menu_region_timezone(self).handle(),
                 Page::MenuTimezoneZone => current_box = Self::get_box_menu_zone_timezone(self).handle(),
                 Page::NoMatchPasswordRoot => current_box = EBOX_NOMATCH_PASSWORD_ROOT.handle(),
@@ -309,16 +304,24 @@ impl App {
     fn get_list_installation(&self) -> Vec<(String, Option<Command>)> {
         let drive: String = format!("/dev/{}", &self.name_drive); 
         let builder_list_command = BuilderListCommand::new(
-            &self.name_device, Path::new(&drive), 
-            &self.name_os, &self.password_user);
+            &self.name_device, &self.name_user, &self.name_full, 
+            &self.password_user, &self.password_root,
+            &self.key_pub, Path::new(&drive), &self.map_key_guest, 
+            &self.locale, &self.region_timezone, &self.zone_timezone,
+            &self.name_host
+            );
         builder_list_command.build()
     }
 
     fn get_list_installation_2(&self) -> Vec<(String, Option<Command>)> {
         let drive: String = format!("/dev/{}", &self.name_drive); 
         let builder_list_command = BuilderListCommand::new(
-            &self.name_device, Path::new(&drive), 
-            &self.name_os, &self.password_user);
+            &self.name_device, &self.name_user, &self.name_full, 
+            &self.password_user, &self.password_root,
+            &self.key_pub, Path::new(&drive), &self.map_key_guest, 
+            &self.locale, &self.region_timezone, &self.zone_timezone,
+            &self.name_host
+            );          
         builder_list_command.build_2()
     }
 

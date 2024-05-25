@@ -1,6 +1,4 @@
-use const_format::{formatcp, str_split};
-
-use crate::shared::constants::char::SPACE;
+use const_format::formatcp;
 
 // General commands
 pub const LSBLK: &str = "lsblk";
@@ -19,4 +17,3 @@ pub const ARG_SH_C: [&str; 3] = [EOA, SH, ARG_C];
 
 // general sh -c arguments
 pub const ASC_QUIET: &str = formatcp!("{ONE_G} {DEV_NULL} {TWO_GN_ONE}");
-pub const ASCS_QUIET: [&str; 3] = str_split!(ASC_QUIET, SPACE);

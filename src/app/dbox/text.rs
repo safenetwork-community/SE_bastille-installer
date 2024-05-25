@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::shared::constants::install::DEFAULT_USERGROUPS;
+
 pub struct TextGaugeInstallation<'a> {    
     pub functions: &'a [(); 4],
 }
@@ -29,15 +31,6 @@ impl fmt::Display for TextMenuDevice {
     }
 }
 
-pub struct TextMenuOperatingSystem {       
-}
-
-impl fmt::Display for TextMenuOperatingSystem {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
-        writeln!(f, "Choose an OS you want to installl SE Bastille on:")
-    }
-}
-
 pub struct TextInputUsername {       
 }
 
@@ -55,7 +48,7 @@ pub struct TextInputUsergroups<'a> {
 impl fmt::Display for TextInputUsergroups<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { 
         writeln!(f, "Enter additional groups besides the default groups which are")?;
-        writeln!(f, "--> wheel,sys,audio,input,video,storage,lp,network,users,power <--")?;
+        writeln!(f, "--> {DEFAULT_USERGROUPS} <--")?;
         writeln!(f, "for user '{}' in a comma seperated list:", self.username) 
     }
 }

@@ -1,4 +1,4 @@
-use const_format::concatcp;
+use const_format::{concatcp, formatcp};
 
 use crate::shared::constants::char::SLASH;
 
@@ -6,7 +6,19 @@ use crate::shared::constants::char::SLASH;
 pub const DOTS: &str = "..";
 
 // install defaults
-pub const ARCH:&str = "aarch64";
+pub const DEFAULT_ARCH: &str = "aarch64";
+pub const DEFAULT_BOOTLOADER: &str = "syslinux";
+pub const DEFAULT_CONSOLEFONT: &str = "eurlatingr";
+pub const DEFAULT_EDITOR: &str = "lunarvim";
+pub const DEFAULT_URL_EDITOR: &str = "https://raw.githubusercontent.com/LunarVim/LunarVim/release-1.3/neovim-0.9/utils/installer/install.sh";
+pub const DEFAULT_PACKAGES: &str = "cargo neovim kitty-terminfo"; 
+pub const DEFAULT_PACKAGE_FS: &str = "btrfs-progs"; 
+pub const DEFAULT_OS_FLAVOR: &str = "Bastille OS";
+pub const DEFAULT_OS_BASE: &str = "Artix";
+pub const DEFAULT_SHELL: &str = "/bin/bash";
+pub const DEFAULT_USERGROUP_USER: &str = "armtix"; 
+pub const DEFAULT_USERGROUPS: &str = "wheel,sys,audio,input,video,storage,lp,network,users,power"; 
+pub const DEFAULT_USERNAME: &str = "armtix";
 
 // filesystem types
 pub const TYPE_FS_FAT32: &str = "fat32";
@@ -15,13 +27,11 @@ pub const TYPE_FS_BTRFS: &str = "btrfs";
 // partition types
 pub const PRIMARY: &str = "primary";
 
-// istallation directories
-pub const DIR_TMP:  &str = "/var/tmp/eqstalxr-bastij";
-
 // shared texts
 pub const TXT_PARTPROBE: &str = concatcp!("Partprobe", DOTS);
 
 // prepare texts
+pub const TXT_DD_FIRST_MBS: &str = concatcp!("Clearing first 32mb of drive", DOTS);
 pub const TXT_MKLABEL: &str = concatcp!("Make label", DOTS);
 pub const TXT_MKBOOT: &str = concatcp!("Make boot partition", DOTS);
 pub const TXT_MKROOT: &str = concatcp!("Make root partition", DOTS);
@@ -35,61 +45,86 @@ pub const TXT_MNT_MAINVOL_ROOT: &str = concatcp!("Mount root for subvolumes", DO
 pub const TXT_MNT_SUBVOLS: &str = concatcp!("Mount subvolumes", DOTS);
 pub const TXT_RM_PARTITIONS: &str = concatcp!("Prepare drive partitions", DOTS);
 pub const TXT_UMOUNT_ROOT: &str = concatcp!("Unmount root", DOTS);
-pub const TXT_DD_FIRST_MBS: &str = concatcp!("Clearing first 32mb of drive", DOTS);
+
 
 // install os texts
-pub const TXT_LIST_MIRROR: &str = concatcp!("Generate mirrorlist", DOTS);
-pub const TXT_EXTRACTING_OS: &str = concatcp!("Extracting", DOTS);
-pub const TXT_KEYRINGS: &str = concatcp!("Setting up keyrings", DOTS);
-pub const TXT_OVERLAY: &str = concatcp!("Extracting", DOTS);
-pub const TXT_PACKAGES: &str = concatcp!("Extracting", DOTS);
-pub const TXT_PERMISSIONS: &str = concatcp!("Extracting", DOTS);
-pub const TXT_SERVICES_ROOT: &str = concatcp!("Extracting", DOTS);
-pub const TXT_SERVICES_USER: &str = concatcp!("Extracting", DOTS);
-pub const TXT_SETTINGS_SYSTEM: &str = concatcp!("Extracting", DOTS);
-pub const TXT_SUPPORT_BTRFS: &str = concatcp!("Extracting", DOTS);
-pub const TXT_USERS: &str = concatcp!("Extracting", DOTS);
-
-// non-fixed install os texts
-pub const TXT_DOWNLOAD_OS: &str = "Downloading latest version of"; 
+pub const TXT_BR_ARCH_GAP: &str = concatcp!("Bridge archticture gap", DOTS);
+pub const TXT_DOWNLOAD_OS: &str = formatcp!("Downloading latest version of {DEFAULT_OS_BASE}{}", DOTS); 
+pub const TXT_EXTRACTING_OS: &str = formatcp!("Extracting {DEFAULT_OS_BASE}{}", DOTS);
 
 // install bootloader texts
-// pub const TXT_BOOTLOADER: &str = concatcp!("Make label", DOTS);
+pub const TXT_INSTALL_BOOTLOADER_BUILDER: &str = concatcp!("Installing bootloader builder", DOTS);
+pub const TXT_INSTALL_BOOTLOADER: &str = concatcp!("Installing bootloader", DOTS);
+
+// setup os texts
+pub const TXT_EDITOR: &str = formatcp!("Installing base editor {DEFAULT_EDITOR}{}", DOTS);
+// pub const TXT_KEYRINGS: &str = concatcp!("Setting up keyrings", DOTS);
+pub const TXT_PACKAGE_FS: &str = concatcp!("Installing btrfs package", DOTS);
+pub const TXT_PACKAGES_INSTALL: &str = concatcp!("Installing packages", DOTS);
+pub const TXT_PACKAGES_UPDATE: &str = concatcp!("Updating packages", DOTS);
+pub const TXT_REZOSUR: &str = formatcp!("Installing base server app {DEFAULT_OS_FLAVOR}{}", DOTS);
+pub const TXT_SETTINGS_SYSTEM: &str = concatcp!("Setting up system settings", DOTS);
+pub const TXT_FSTAB: &str = concatcp!("Generating fstab", DOTS);
+pub const TXT_USERS: &str = concatcp!("Setting up users", DOTS);
+
+
 
 // cleanup texts 
 pub const TXT_CLEAN_INSTALL: &str = concatcp!("Make label", DOTS);
 pub const TXT_UMOUNT_DIRS: &str = concatcp!("Unmount directories", DOTS);
-
-pub const PART_BOOT: u32 = 1;
-pub const PART_ROOT: u32 = 2;
-
-// end dirs
-pub const BOOT: &str = "boot";
-pub const HOME: &str = "home";
-pub const ROOT: &str = "root";
-
-// volume dirs
-pub const DIR_BOOT: &str = concatcp!(DIR_TMP, SLASH, BOOT);
-pub const DIR_ROOT: &str = concatcp!(DIR_TMP, SLASH, ROOT);
-
-pub const DIR_HOME: &str = concatcp!(DIR_ROOT, SLASH, HOME);
-
-// subvolume dirs
-pub const DIR_END_SV_ROOT: &str ="@";
-pub const DIR_END_SV_HOME: &str = "@home";
-
-pub const DIR_SV_ROOT: &str = concatcp!(DIR_ROOT, SLASH, DIR_END_SV_ROOT);
-pub const DIR_SV_HOME: &str = concatcp!(DIR_ROOT, SLASH, DIR_END_SV_HOME);
-
-pub const SUBVOLS_PART_ROOT: [(&str, &str); 2] = [(DIR_END_SV_ROOT, DIR_ROOT), (DIR_END_SV_HOME, DIR_HOME)];
-
-// install dirs
-pub const DIR_PAC_PKG: &str = concatcp!(DIR_ROOT, "/var/cache/pacman/pkg");
-pub const DIR_PKG_CACHE: &str = concatcp!(DIR_TMP, "/pkg-cache");
-
 
 // URLs
 pub const URL_ARMTIX_DL: &str = "https://armtixlinux.org/images/";
 
 // filenames
 pub const FILE_XZ_ARMTIX: &str = "armtix-dinit-20240303.tar.xz";
+pub const FILE_QEMU_STATIC: &str = "qemu-aarch64-static";
+
+// end dirs
+pub const BOOT: &str = "boot";
+pub const HOME: &str = "home";
+pub const ROOT: &str = "root";
+
+// partition numbers
+pub const PART_BOOT: u32 = 1;
+pub const PART_ROOT: u32 = 2;
+
+// volume dirs
+pub const DIR_HG_BOOT: &str = concatcp!(DIR_MNT, SLASH, BOOT);
+pub const DIR_HG_ROOT: &str = concatcp!(DIR_MNT, SLASH, ROOT);
+pub const DIR_HG_HOME: &str = concatcp!(DIR_HG_ROOT, SLASH, HOME);
+
+// subvolume dirs
+pub const DIR_END_SV_ROOT: &str ="@";
+pub const DIR_END_SV_HOME: &str = "@home";
+
+pub const DIR_SV_ROOT: &str = concatcp!(DIR_HG_ROOT, SLASH, DIR_END_SV_ROOT);
+pub const DIR_SV_HOME: &str = concatcp!(DIR_HG_ROOT, SLASH, DIR_END_SV_HOME);
+
+pub const SUBVOLS_PART_ROOT: [(&str, &str); 2] = [(DIR_END_SV_ROOT, DIR_HG_ROOT), (DIR_END_SV_HOME, DIR_HG_HOME)];
+
+// fstab
+pub const LABEL_BOOT: &str = "BASTIJ_SIN";
+pub const LABEL_ROOT_AND_HOME: &str = "BASTIJ_FUT";
+
+// installation directories
+pub const DIR_MNT:  &str = "/var/tmp/eqstalxr-bastij";
+pub const DIR_HOME:  &str = "/home/bas";
+pub const DIR_SYS_BLOCK: &str = "/sys/block";
+pub const DIR_USR_BIN: &str = "/usr/bin";
+pub const DIR_VAR_TMP: &str = "/var/tmp";
+
+// istallation locations
+pub const LOC_BINFMT_AARCH64: &str = "/usr/lib/binfmt.d/qemu-aarch64-static.conf";
+pub const LOC_BINFMT_REGISTER: &str = "/proc/sys/fs/binfmt_misc/register";
+pub const LOC_FSTAB: &str = "/etc/fstab";
+pub const LOC_HOSTNAME: &str = "/etc/hostname";
+pub const LOC_PROFILE: &str = concatcp!(DIR_HOME, SLASH, ".profile");
+pub const LOC_LOCALE_CONF: &str = "/etc/locale.conf";
+pub const LOC_LOCALE_GEN: &str = "/etc/locale.gen";
+pub const LOC_MKINITCPIO_STS: &str = "/etc/mkinitcpio.d/linux-aarch64.preset";
+pub const LOC_QEMU_USER_STATIC: &str = concatcp!(DIR_USR_BIN, SLASH, FILE_QEMU_STATIC);
+pub const LOC_VCONSOLE_CONF: &str = "/etc/vconsole.conf";
+
+// Host -> Guest installation directories 
+pub const LOC_HG_QEMU_USER_STATIC: &str = concatcp!(DIR_HG_ROOT, DIR_USR_BIN, SLASH, FILE_QEMU_STATIC);
