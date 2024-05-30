@@ -7,7 +7,7 @@ pub const DOTS: &str = "..";
 
 // install defaults
 pub const DEFAULT_ARCH: &str = "aarch64";
-pub const DEFAULT_BOOTLOADER: &str = "syslinux";
+pub const DEFAULT_BOOTLOADER: &str = "grub";
 pub const DEFAULT_CONSOLEFONT: &str = "eurlatingr";
 pub const DEFAULT_EDITOR: &str = "lunarvim";
 pub const DEFAULT_URL_EDITOR: &str = "https://raw.githubusercontent.com/LunarVim/LunarVim/release-1.3/neovim-0.9/utils/installer/install.sh";
@@ -43,8 +43,10 @@ pub const TXT_MKSUBVOL_ROOT: &str = concatcp!("Create subvolume root", DOTS);
 pub const TXT_MNT_BOOT: &str = concatcp!("Mount boot", DOTS);
 pub const TXT_MNT_MAINVOL_ROOT: &str = concatcp!("Mount root for subvolumes", DOTS);
 pub const TXT_MNT_SUBVOLS: &str = concatcp!("Mount subvolumes", DOTS);
+pub const TXT_MOVE_BOOT: &str = concatcp!("Move extracted boot files to boot partition", DOTS);
 pub const TXT_RM_PARTITIONS: &str = concatcp!("Prepare drive partitions", DOTS);
 pub const TXT_UMOUNT_ROOT: &str = concatcp!("Unmount root", DOTS);
+pub const TXT_UMOUNT_SD_CARD: &str = concatcp!("Unmount partitions SD card", DOTS);
 
 
 // install os texts
@@ -117,6 +119,7 @@ pub const DIR_VAR_TMP: &str = "/var/tmp";
 // istallation locations
 pub const LOC_BINFMT_AARCH64: &str = "/usr/lib/binfmt.d/qemu-aarch64-static.conf";
 pub const LOC_BINFMT_REGISTER: &str = "/proc/sys/fs/binfmt_misc/register";
+pub const LOC_DEFAULT_BINFMT_ARCH: &str = "/proc/sys/fs/binfmt_misc/qemu-aarch64";
 pub const LOC_FSTAB: &str = "/etc/fstab";
 pub const LOC_HOSTNAME: &str = "/etc/hostname";
 pub const LOC_PROFILE: &str = concatcp!(DIR_HOME, SLASH, ".profile");

@@ -33,11 +33,10 @@ const MKFS_VFAT: &str = "mkfs.vfat";
 const MKLABEL: &str = "mklabel";
 const MKPART: &str = "mkpart";
 const MOUNT: &str = "mount";
+const MV: &str = "mv";
 const PACMAN: &str = "pacman";
-// const PACMAN_KEY: &str = "pacman-key";
 const PARTED: &str = "parted";
 const PARTPROBE: &str = "partprobe";
-const RM: &str = "rm";
 const SED: &str = "sed";
 const SETUP_KEYMAP: &str = "setup-keymap";
 const SYSLINUX_INSTALL_UPDATE: &str = "syslinux-install_update";
@@ -73,15 +72,12 @@ const ARGS_U: &str = "-U";
 const ARGS_SYYU: &str = "-Syyu";
 
 // long arguments
-// const ARL_INIT: &str = "--init";
 const ARL_DIR: &str = "--directory";
 const ARL_GROUP: &str = "--group=";
 const ARL_NOCONFIRM: &str = "--noconfirm";
-// const ARL_POPULATE: &str = "--populate";
 const ARL_OWNER: &str = "--owner=";
 
 // command specific arguments
-// const ARTIX_ARM: &str = "artixarm";
 const BS_1M: &str = "bs=1M";
 const COUNT_32: &str = "count=32";
 const EOF: &str = "EOF";
@@ -123,6 +119,7 @@ const ASC_MKDIR_P: &str = formatcp!("{MKDIR} {ARG_P}");
 const ASC_MKLABEL_GPT: &str = formatcp!("{MKLABEL} {GPT}");
 const ASC_MKPART_PRIMARY: &str = formatcp!("{MKPART} {PRIMARY}");
 const ASC_MOUNT_O: &str = formatcp!("{MOUNT} {ARG_O}");
+const ASC_MV_BOOT: &str = formatcp!("{MV} {DIR_HG_ROOT}/{BOOT}/* {DIR_HG_BOOT}");
 // const ASC_PACMAN_KEY_INIT: &str = formatcp!("{PACMAN_KEY} {ARL_INIT}");
 // const ASC_PACMAN_KEY_POPULATE: &str = formatcp!("{PACMAN_KEY} {ARL_POPULATE} {ARTIX_ARM}");
 const ASC_PARTED_OPT: &str = formatcp!("{PARTED} {ARG_A} {OPTIMAL} {ARG_S}");
@@ -135,6 +132,8 @@ const AHG_PACMAN_INSTALL: &str = formatcp!("{ARTIX_CHROOT} {DIR_HG_ROOT} {PACMAN
 const AHG_PACMAN_UPDATE: &str = formatcp!("{ARTIX_CHROOT} {DIR_HG_ROOT} {PACMAN} {ARGS_SYYU} {ARL_NOCONFIRM}");
 const AHG_FSTABGEN: &str = formatcp!("{FSTABGEN} {ARGS_U} {DIR_HG_ROOT} | {TEE} {ARG_A} {LOC_FSTAB}");
 const AHG_RM_STS: &str = formatcp!("{ARTIX_CHROOT} {DIR_HG_ROOT} {RM} {LOC_MKINITCPIO_STS}");
+const AHG_REGISTER_QEMU_STATIC: &str = formatcp!("; {CAT} {LOC_BINFMT_AARCH64} | {TEE} {LOC_BINFMT_REGISTER}");
+const AHG_INSTALL_QEMU_STATIC: &str = formatcp!("{INSTALL} {ARG_MOD755} {ARGS_C} {LOC_QEMU_USER_STATIC} {LOC_HG_QEMU_USER_STATIC}");
 
 // sh multiline arguments
 const ASML_LUNARVIM: &str = formatcp!("{ARTIX_CHROOT} {DIR_HG_ROOT} {SED} {ARG_E} {REX_HD} {ASC_QUIET} {FILE_LITERAL} {EOF}\n \
@@ -148,9 +147,6 @@ const ASML_LUNARVIM: &str = formatcp!("{ARTIX_CHROOT} {DIR_HG_ROOT} {SED} {ARG_E
 // const ASML_PACMAN_KEY: &str = formatcp!("{ARTIX_CHROOT} {DIR_HG_ROOT} {ASC_PACMAN_KEY_INIT}; \
 //            {ARTIX_CHROOT} {DIR_HG_ROOT} {ASC_PACMAN_KEY_POPULATE}");
 const ASML_EQSTALX_FS: &str = formatcp!("{AHG_RM_STS};{AHG_PACMAN_INSTALL} {DEFAULT_PACKAGE_FS}");
-const ASC_INSTALL_QEMU_STATIC: &str = formatcp!("{INSTALL} {ARG_MOD755} {ARGS_C} {LOC_QEMU_USER_STATIC} {LOC_HG_QEMU_USER_STATIC}; \
-        {CAT} {LOC_BINFMT_AARCH64} | {TEE} {LOC_BINFMT_REGISTER}\
-");
 
 #[derive(Clone, Copy)]
 pub struct CommandAction {}
@@ -183,7 +179,14 @@ impl CommandAction {
     pub fn bridge_arch_gap() -> Option<Command> {
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C);
-        cmd.arg(ASC_INSTALL_QEMU_STATIC);
+        let mut command_sh = String::new(); 
+        if !Path::new(LOC_HG_QEMU_USER_STATIC).exists() {
+            command_sh.push_str(AHG_INSTALL_QEMU_STATIC);
+            if !Path::new(LOC_DEFAULT_BINFMT_ARCH).exists() {
+                command_sh.push_str(AHG_REGISTER_QEMU_STATIC);
+            }
+        }
+        cmd.arg(command_sh);
         Some(cmd)
     }
 
@@ -215,6 +218,9 @@ impl CommandAction {
     pub fn extract_rootfs(loc_file: &str, dir_dest: &str) -> Option<Command> {
         let mut dir_end = String::from(dir_dest);
         dir_end.push_str(DIR_VAR_TMP);
+
+        info!("path: {}", dir_end);
+
         match Path::new(&dir_end).exists() {
             false => {
                 let mut cmd = Command::new(SUDO);
@@ -345,6 +351,12 @@ impl CommandAction {
         Some(cmd)
     }
 
+    pub fn move_boot() -> Option<Command> {
+        let mut cmd = Command::new(SUDO);
+        cmd.args(ARG_SH_C)
+        .arg(ASC_MV_BOOT);
+        Some(cmd)
+    }
 
     pub fn partprobe(drive: &Path) -> Option<Command> {
         let command_sh = format!("{} {} {}", PARTPROBE, drive.display(), ASC_QUIET);
@@ -354,9 +366,9 @@ impl CommandAction {
         Some(cmd)
     }
 
-    pub fn remove_partitions(drive: &Path) -> Option<Command> {
+    pub fn remove_partitions_drive(drive: &Path) -> Option<Command> {
         let dis_drive = drive.display();
-        let list_pts = ListFromCommand::all_partition_numbers(drive);
+        let list_pts = ListFromCommand::partition_numbers(drive);
 
         match list_pts.len() {
             0 => None,
@@ -369,10 +381,7 @@ impl CommandAction {
                         (_, partition) => format!("{ASC_PARTED_S} {dis_drive} {RM} {partition} {ASC_QUIET}"),
                     }
                 }).collect();
-                match Self::umount_drive(drive) {
-                    Some(sh_umount) => cmd.arg(format!("{}{}", sh_umount, sh_remove)),
-                    None => cmd.arg(sh_remove),
-                };
+                cmd.arg(sh_remove);
                 Some(cmd)        
             }
         }
@@ -432,21 +441,38 @@ impl CommandAction {
     pub fn _show_elapsed_time() -> Option<Command> {
         Some(Command::new(TRUE))
     }
-    
-    pub fn umount(path: &Path) -> Option<Command> {
-        let mut cmd = Command::new(SUDO);
-        cmd.arg(UMOUNT)
-        .arg(format!("{}", path.display()));
-        Some(cmd)
+       
+    pub fn umount(path: &Path) -> Option<Command> { 
+        match CommandAction::is_mounted(path) {
+            true => {
+                let mut cmd = Command::new(SUDO);
+                cmd.arg(UMOUNT)
+                .arg(format!("{}", path.display()));
+                Some(cmd)
+            } 
+            false => None,
+        }
     }
 
-    fn umount_drive(drive: &Path) -> Option<String> { 
+    pub fn umount_drive(drive: &Path) -> Option<Command> { 
+        let dis_drive = drive.display();
         let list_pts = ListFromCommand::mounted_partitions(drive);
+
+        info!("list_pts: {:?}", list_pts);
 
         match list_pts.len() {
             0 => None,
-            _ => {
-                Some(list_pts.iter().map(|partition| format!("{UMOUNT} {partition} {ASC_QUIET}; ")).collect())
+             _ => {
+                let mut cmd = Command::new(SUDO); 
+                cmd.args(ARG_SH_C);
+                let sh_remove: String = list_pts.iter().with_position().map(|e| {
+                    match e {
+                        (Position::First, partition) | (Position::Middle, partition) => format!("{UMOUNT} {dis_drive}{partition} {ASC_QUIET}; "),
+                        (_, partition) => format!("{UMOUNT} {dis_drive}{partition} {ASC_QUIET}"),
+                    }
+                }).collect();
+                cmd.arg(sh_remove);
+                Some(cmd)        
             }
         }
     }
@@ -483,4 +509,10 @@ impl CommandAction {
         cmd.args(ARG_SH_C).arg(AHG_FSTABGEN);
         Some(cmd)
     }
+
+    fn is_mounted(path: &Path) -> bool { 
+        let list_pts = ListFromCommand::mounted_all();
+        info!("list_pts: {:?}", list_pts);
+        list_pts.contains(&String::from(path.to_str().unwrap()))
+    } 
 }

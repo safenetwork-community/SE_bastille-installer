@@ -92,6 +92,24 @@ impl ListFromCommand {
             REGEX_FIND_DIRS_ALL.to_vec(), SED_FIND_DEFAULT)
     }
 
+    pub fn mounted_all() -> Vec<String> {
+        let command_sh = format!("{} {} {}", LSBLK, ARG_MOUNTED_PARTITIONS, ARG_FILTER_MOUNTPOINT);
+        let output_command = Command::new(SH)
+            .arg(ARG_C)
+            .arg(command_sh.clone()) 
+            .output()
+            .unwrap_or_else(|e| panic!("{}{}\n{}", ERR_FAILED_EXECUTE_LSBLK, command_sh, e));
+
+        match String::from_utf8(output_command.stdout) {
+            Ok(output) => { 
+                output.lines().map(|e| { 
+                String::from(e.trim())
+                }).collect()
+            }
+            _ => panic!("UtfError partitions mounted"),
+        } 
+    }
+
     pub fn mounted_partitions(path_drive: &Path) -> Vec<String> {
         let command_sh = format!(r#"{} {} {}? {}"#, LSBLK, ARG_MOUNTED_PARTITIONS, path_drive.display(), ARG_FILTER_MOUNTPOINT);
         let output_command = Command::new(SH)
@@ -110,8 +128,8 @@ impl ListFromCommand {
         } 
     }
 
-    pub fn all_partition_numbers(path_drive: &Path) -> Vec<String> {
-        let command_sh = format!(r#"{} {} {}?"#, LSBLK, ARG_ALL_PARTITIONS, path_drive.display());
+    pub fn partition_numbers(drive: &Path) -> Vec<String> {
+        let command_sh = format!(r#"{} {} {}?"#, LSBLK, ARG_ALL_PARTITIONS, drive.display());
         let output_command = Command::new(SH)
             .arg(ARG_C)
             .arg(command_sh.clone())
@@ -121,7 +139,7 @@ impl ListFromCommand {
         match String::from_utf8(output_command.stdout) {
             Ok(output) => {
                 output.lines().map(|e| {
-                    String::from(e.trim().strip_prefix(path_drive.to_str().unwrap()).unwrap())
+                    String::from(e.trim().strip_prefix(drive.to_str().unwrap()).unwrap())
                 }).collect()
             }
             _ => panic!("UtfError partitions mounted"),

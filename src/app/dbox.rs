@@ -4,13 +4,11 @@ pub mod r#type;
 
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::time::Duration;
 use std::thread::sleep;
 
 use dialog::{backends::Dialog, Choice};
 use regex::RegexSet;
-
 
 use crate::app::commands::execute::CommandExecute;
 use crate::app::commands::list::*;
@@ -19,6 +17,8 @@ use crate::app::dbox::r#type::*;
 
 use crate::shared::constants::dbox::*;
 use crate::shared::constants::string::EMPTY;
+
+use super::install::ListCommand;
 
 pub struct BoxMenuMain<'a> {
     pub msg_error: &'a mut String,
@@ -721,23 +721,24 @@ impl HandlerBox for BoxQuestionConfig<'_> {
 }
 
 pub struct BoxGaugeInstallation<'a> {
-    pub list_command: Vec<(String, Option<Command>)>, 
+    pub builder_list_command: ListCommand,
     pub msg_error: &'a mut String,
 }
 
 impl HandlerGauge for BoxGaugeInstallation<'_> {
     fn handle(&mut self) -> Page {
-        let c_total = self.list_command.len();
+        
+        let c_total = self.builder_list_command.len();
 
         for c_done in 0..c_total {
             let percent: u8 = (c_done * 100 / c_total) as u8;
-            let tuple_command = &mut self.list_command[c_done];
-            let option_command = &mut tuple_command.1; 
+            
+            let (text, some_command) = self.builder_list_command.get_method(c_done);
 
-            BoxGauge::show(tuple_command.0.as_str(), percent);
-            sleep(Duration::from_millis(1000));
-            match option_command {
-                Some(command) => { 
+            BoxGauge::show(text.as_str(), percent);
+            sleep(Duration::from_millis(900));
+            match some_command {
+                Some(mut command) => { 
                     let mut display_command :OsString = OsString::from(command.get_program());
                         display_command.push(" ");
                         display_command.push(command.get_args()
@@ -751,7 +752,8 @@ impl HandlerGauge for BoxGaugeInstallation<'_> {
 
                     match result_command.status.success() {
                         false => {
-                           *self.msg_error = format!("Process returned an error:\n\n{:?}\n\nOutput stderr:\n\n{}",
+                           *self.msg_error = format!("Error step: {}\nProcess returned an error:\n\n{:?}\n\nOutput stderr:\n\n{}",
+                                c_done,
                                 display_command,  
                                 String::from_utf8(result_command.stderr).map_err(|non_utf8| 
                                 String::from_utf8_lossy(non_utf8.as_bytes()).into_owned()).unwrap()); 

@@ -4,13 +4,12 @@ mod install;
 
 use anyhow::{anyhow, Error, Result};
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use crate::app::commands::execute::CommandExecute;
 use crate::app::dbox::*;
 use crate::app::dbox::ebox::*;
 use crate::app::dbox::r#type::*;
-use crate::app::install::BuilderListCommand;
+use crate::app::install::ListCommand;
 
 use crate::shared::constants::error::ErrorInstaller; 
 
@@ -197,10 +196,8 @@ impl App {
 
     fn get_box_mixed_gauge_installation(&mut self) -> BoxGaugeInstallation {
 
-        let list_command: Vec<(String, Option<Command>)> = Self::get_list_installation(self);             
-
         BoxGaugeInstallation {
-            list_command,
+            builder_list_command: self.get_builder_list_command(),
             msg_error: &mut self.msg_error,
         }
     }
@@ -219,10 +216,8 @@ impl App {
         self.var_key_guest = String::from("yr-af");
         self.zone_timezone = String::from("Amsterdam");
 
-        let list_command: Vec<(String, Option<Command>)> = Self::get_list_installation_2(self);             
-
         BoxGaugeInstallation {
-            list_command,
+            builder_list_command: self.get_builder_list_command(),
             msg_error: &mut self.msg_error,
         }
     }
@@ -301,28 +296,13 @@ impl App {
         }
     }
     
-    fn get_list_installation(&self) -> Vec<(String, Option<Command>)> {
-        let drive: String = format!("/dev/{}", &self.name_drive); 
-        let builder_list_command = BuilderListCommand::new(
+    fn get_builder_list_command(&self) -> ListCommand {
+        ListCommand::new(
             &self.name_device, &self.name_user, &self.name_full, 
             &self.password_user, &self.password_root,
-            &self.key_pub, Path::new(&drive), &self.map_key_guest, 
-            &self.locale, &self.region_timezone, &self.zone_timezone,
-            &self.name_host
-            );
-        builder_list_command.build()
+            &self.key_pub, Path::new(&format!("/dev/{}", &self.name_drive)), 
+            &self.map_key_guest, &self.locale, 
+            &self.region_timezone, &self.zone_timezone,
+            &self.name_host)
     }
-
-    fn get_list_installation_2(&self) -> Vec<(String, Option<Command>)> {
-        let drive: String = format!("/dev/{}", &self.name_drive); 
-        let builder_list_command = BuilderListCommand::new(
-            &self.name_device, &self.name_user, &self.name_full, 
-            &self.password_user, &self.password_root,
-            &self.key_pub, Path::new(&drive), &self.map_key_guest, 
-            &self.locale, &self.region_timezone, &self.zone_timezone,
-            &self.name_host
-            );          
-        builder_list_command.build_2()
-    }
-
 }
