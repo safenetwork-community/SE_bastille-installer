@@ -50,12 +50,12 @@ impl ListCommand {
 
     pub fn len(&self) -> u32 {
         match self.device.as_str() {
-            "rpi4" => 32,
-            _ => 0,
+            "rpi4" => 23,
+            _ => 7,
         }
     }
 
-    pub fn get_method(&self, index: u32) -> (String, Option<Command>) {
+    pub fn get_method(&self, index: u32) -> (String, Option<Command>) { 
         match self.device.as_str() {
             "rpi4" => match index {
                 0 => (String::from(TXT_UMOUNT_SD_CARD), CommandAction::umount_drive(&self.drive)),
@@ -96,16 +96,20 @@ impl ListCommand {
                 _ => panic!("Command function not found in list: {}, {}", &self.device, index),
             },
             "test" => match index {
-                0 => (String::from(TXT_PACKAGES_UPDATE), CommandAction::update_packages()),
-                1 => (String::from(TXT_INSTALL_BOOTLOADER_BUILDER), CommandAction::eqstalx_packages(DEFAULT_BOOTLOADER)),
-                2 => (String::from(TXT_INSTALL_BOOTLOADER), CommandAction::eqstalx_bootloader()),
-                3 => (String::from(TXT_FSTAB), CommandAction::zjenx_fstab()),
-                4 => (String::from(TXT_MOVE_BOOT), CommandAction::move_boot()),
-                5 => (String::from(TXT_PACKAGES_INSTALL), CommandAction::eqstalx_packages(DEFAULT_PACKAGES)),
-                6 => (String::from(TXT_PACKAGE_FS), CommandAction::eqstalx_fs()),
-                7 => (String::from(TXT_USERS), CommandAction::set_users(&self.name_user, &self.name_full, &self.password_user, &self.password_root, &self.key_pub)),
-                8 => (String::from(TXT_REZOSUR), CommandAction::azjx_rezosur()),
-                9 => (String::from(TXT_EDITOR), CommandAction::azjx_editor()),
+                0 => (String::from(TXT_MKDIR_MNTS), CommandAction::make_dirs(&[DIR_HG_ROOT, DIR_HG_BOOT])),
+                1 => (String::from(TXT_MNT_MAINVOL_ROOT), CommandAction::mount_mainvol(&self.partition_root, DIR_HG_ROOT)),
+                2 => (String::from(TXT_MNT_SUBVOLS), CommandAction::mount_subvols(&self.partition_root, &SUBVOLS_PART_ROOT)),
+                3 => (String::from(TXT_MNT_BOOT), CommandAction::mount(&self.partition_boot, DIR_HG_BOOT)),
+                4 => (String::from(TXT_PACKAGES_UPDATE), CommandAction::update_packages()),
+                5 => (String::from(TXT_USERS), CommandAction::set_users(&self.name_user, &self.name_full, &self.password_user, &self.password_root, &self.key_pub)),
+                6 => (String::from(TXT_FSTAB), CommandAction::zjenx_fstab()),
+                // 5 => (String::from(TXT_INSTALL_BOOTLOADER_BUILDER), CommandAction::eqstalx_packages(DEFAULT_BOOTLOADER)),
+                // 6 => (String::from(TXT_INSTALL_BOOTLOADER), CommandAction::eqstalx_bootloader()),
+                //4 => (String::from(TXT_MOVE_BOOT), CommandAction::move_boot()),
+                //5 => (String::from(TXT_PACKAGES_INSTALL), CommandAction::eqstalx_packages(DEFAULT_PACKAGES)),
+                //6 => (String::from(TXT_PACKAGE_FS), CommandAction::eqstalx_fs()),
+                //8 => (String::from(TXT_REZOSUR), CommandAction::azjx_rezosur()),
+                //9 => (String::from(TXT_EDITOR), CommandAction::azjx_editor()),
                 _ => panic!("Command function not found in list: {}, {}", &self.device, index),
             }
             _ => panic!("Command function not found in list: {}, {}", &self.device, index),

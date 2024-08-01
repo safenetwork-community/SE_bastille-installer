@@ -82,6 +82,9 @@ pub const URL_ARMTIX_DL: &str = "https://armtixlinux.org/images/";
 pub const FILE_XZ_ARMTIX: &str = "armtix-dinit-20240303.tar.xz";
 pub const FILE_QEMU_STATIC: &str = "qemu-aarch64-static";
 
+// main mount directory
+pub const DIR_MNT:  &str = "/var/tmp/eqstalxr-bastij";
+
 // end dirs
 pub const BOOT: &str = "boot";
 pub const HOME: &str = "home";
@@ -110,7 +113,6 @@ pub const LABEL_BOOT: &str = "BASTIJ_SIN";
 pub const LABEL_ROOT_AND_HOME: &str = "BASTIJ_FUT";
 
 // installation directories
-pub const DIR_MNT:  &str = "/var/tmp/eqstalxr-bastij";
 pub const DIR_HOME:  &str = "/home/bas";
 pub const DIR_SYS_BLOCK: &str = "/sys/block";
 pub const DIR_USR_BIN: &str = "/usr/bin";
@@ -128,6 +130,7 @@ pub const LOC_LOCALE_GEN: &str = "/etc/locale.gen";
 pub const LOC_MKINITCPIO_STS: &str = "/etc/mkinitcpio.d/linux-aarch64.preset";
 pub const LOC_QEMU_USER_STATIC: &str = concatcp!(DIR_USR_BIN, SLASH, FILE_QEMU_STATIC);
 pub const LOC_VCONSOLE_CONF: &str = "/etc/vconsole.conf";
+pub const LOC_DB_LOCK_PACMAN: &str = "/var/lib/pacman/db.lck";
 
 // Host -> Guest installation directories 
 pub const LOC_HG_QEMU_USER_STATIC: &str = concatcp!(DIR_HG_ROOT, DIR_USR_BIN, SLASH, FILE_QEMU_STATIC);

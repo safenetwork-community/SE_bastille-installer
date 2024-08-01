@@ -131,7 +131,8 @@ const AHG_BOOTLOADER_INSTALL: &str = formatcp!("{ARTIX_CHROOT} {DIR_HG_ROOT} {SY
 const AHG_PACMAN_INSTALL: &str = formatcp!("{ARTIX_CHROOT} {DIR_HG_ROOT} {PACMAN} {ARGS_S} {ARL_NOCONFIRM}");
 const AHG_PACMAN_UPDATE: &str = formatcp!("{ARTIX_CHROOT} {DIR_HG_ROOT} {PACMAN} {ARGS_SYYU} {ARL_NOCONFIRM}");
 const AHG_FSTABGEN: &str = formatcp!("{FSTABGEN} {ARGS_U} {DIR_HG_ROOT} | {TEE} {ARG_A} {LOC_FSTAB}");
-const AHG_RM_STS: &str = formatcp!("{ARTIX_CHROOT} {DIR_HG_ROOT} {RM} {LOC_MKINITCPIO_STS}");
+const AHG_RM: &str = formatcp!("{ARTIX_CHROOT} {DIR_HG_ROOT} {RM}");
+const AHG_RM_STS: &str = formatcp!("{AHG_RM} {LOC_MKINITCPIO_STS}");
 const AHG_REGISTER_QEMU_STATIC: &str = formatcp!("; {CAT} {LOC_BINFMT_AARCH64} | {TEE} {LOC_BINFMT_REGISTER}");
 const AHG_INSTALL_QEMU_STATIC: &str = formatcp!("{INSTALL} {ARG_MOD755} {ARGS_C} {LOC_QEMU_USER_STATIC} {LOC_HG_QEMU_USER_STATIC}");
 
@@ -170,9 +171,22 @@ impl CommandAction {
         Some(cmd)
     }
  
+    pub fn eqstalx_fs() -> Option<Command> { 
+        let mut cmd = Command::new(SUDO);
+        cmd.args(ARG_SH_C).arg(ASML_EQSTALX_FS);
+        Some(cmd)
+    }
+
     pub fn eqstalx_packages(packages: &str) -> Option<Command> {
         let mut cmd = Command::new(SUDO);
-        cmd.args(ARG_SH_C).arg(format!("{AHG_PACMAN_INSTALL} {packages}"));
+        cmd.args(ARG_SH_C);
+        match Path::new(&format!("{DIR_HG_ROOT}/{LOC_DB_LOCK_PACMAN}")).exists() {
+            true => {
+                cmd.arg(format!("{AHG_RM} {LOC_DB_LOCK_PACMAN};"));
+            },
+            _ => {},
+        }
+        cmd.arg(format!("{AHG_PACMAN_INSTALL} {packages}"));
         Some(cmd)
     }
     
@@ -385,12 +399,6 @@ impl CommandAction {
                 Some(cmd)        
             }
         }
-    }
-
-    pub fn eqstalx_fs() -> Option<Command> {
-        let mut cmd = Command::new(SUDO);
-        cmd.args(ARG_SH_C).arg(ASML_EQSTALX_FS);
-        Some(cmd)
     }
 
     pub fn set_settings_system(region_timezone: &str, zone_timezone: &str, locale: &str, keymap: &str, name_host: &str) -> Option<Command> {

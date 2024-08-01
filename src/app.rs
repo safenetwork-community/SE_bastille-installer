@@ -206,7 +206,7 @@ impl App {
         self.key_pub = String::from("id_pjehrsohmehj_folaht.pub");
         self.locale = String::from("be_FR.utf8");
         self.name_drive = String::from("sda");
-        self.name_device = String::from("rpi4");
+        self.name_device = String::from("test");
         self.name_full = String::from("Fôlat Pjêrsômêj");
         self.name_host = String::from("Rezosur-uq");
         self.name_user = String::from("folaht");
