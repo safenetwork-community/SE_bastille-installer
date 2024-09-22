@@ -51,11 +51,11 @@ impl ListCommand {
     pub fn len(&self) -> u32 {
         match self.device.as_str() {
             "rpi4" => 23,
-            _ => 7,
+            _ => 22,
         }
     }
 
-    pub fn get_method(&self, index: u32) -> (String, Option<Command>) { 
+    pub fn get_method(&self, index: u32) -> (String, Vec<Command>) { 
         match self.device.as_str() {
             "rpi4" => match index {
                 0 => (String::from(TXT_UMOUNT_SD_CARD), CommandAction::umount_drive(&self.drive)),
@@ -63,7 +63,7 @@ impl ListCommand {
                 2 => (String::from(TXT_DD_FIRST_MBS), CommandAction::dd_first_mbs(&self.drive)),
                 3 => (String::from(TXT_MKLABEL), CommandAction::make_label(&self.drive)),
                 4 => (String::from(TXT_MKBOOT), CommandAction::make_boot_partition(&self.drive, TYPE_FS_FAT32)),
-                5 => (String::from(TXT_MKROOT), CommandAction::make_root_partition(&self.drive, TYPE_FS_BTRFS, PART_BOOT)),
+                5 => (String::from(TXT_MKROOT), CommandAction::make_root_partition(&self.drive, TYPE_FS_BTRFS)),
                 6 => (String::from(TXT_PARTPROBE), CommandAction::partprobe(&self.drive)),
                 7 => (String::from(TXT_MKVFAT), CommandAction::mkfs_vfat(&self.drive, PART_BOOT)),
                 8 => (String::from(TXT_MKBTRFS), CommandAction::mkfs_btrfs(&self.drive, PART_ROOT)),
@@ -71,7 +71,7 @@ impl ListCommand {
                 10 => (String::from(TXT_MNT_MAINVOL_ROOT), CommandAction::mount_mainvol(&self.partition_root, DIR_HG_ROOT)),
                 11 => (String::from(TXT_MKSUBVOL_ROOT), CommandAction::make_subvol(Path::new(DIR_SV_ROOT))),
                 12 => (String::from(TXT_MKSUBVOL_HOME), CommandAction::make_subvol(Path::new(DIR_SV_HOME))),
-                13 => (String::from(TXT_UMOUNT_ROOT), CommandAction::umount(&self.partition_root)),
+                13 => (String::from(TXT_UMOUNT_ROOT), CommandAction::umount_volume(&self.partition_root)),
                 14 => (String::from(TXT_MNT_SUBVOLS), CommandAction::mount_subvols(&self.partition_root, &SUBVOLS_PART_ROOT)),
                 15 => (String::from(TXT_MNT_BOOT), CommandAction::mount(&self.partition_boot, DIR_HG_BOOT)),
                 16 => (String::from(TXT_DOWNLOAD_OS), CommandAction::wget(DIR_MNT, format!("{URL_ARMTIX_DL}{FILE_XZ_ARMTIX}").as_str())),
@@ -79,7 +79,7 @@ impl ListCommand {
                 18 => (String::from(TXT_BR_ARCH_GAP), CommandAction::bridge_arch_gap()),
                 /*
                 19 => (String::from(TXT_PACKAGES_UPDATE), CommandAction::update_packages()),
-                20 => (String::from(TXT_INSTALL_BOOTLOADER_BUILDER), CommandAction::eqstalx_packages(DEFAULT_BOOTLOADER)),
+                20 => (String::from(TXT_INSTALL_BOOTLOADER_BUILDER), CommandAction::eqstalx_builder(DEFAULT_BOOTLOADER)),
                 21 => (String::from(TXT_INSTALL_BOOTLOADER), CommandAction::eqstalx_bootloader()),
                 22 => (String::from(TXT_FSTAB), CommandAction::zjenx_fstab()),
                 23 => (String::from(TXT_MOVE_BOOT), CommandAction::move_boot()),
@@ -96,14 +96,29 @@ impl ListCommand {
                 _ => panic!("Command function not found in list: {}, {}", &self.device, index),
             },
             "test" => match index {
-                0 => (String::from(TXT_MKDIR_MNTS), CommandAction::make_dirs(&[DIR_HG_ROOT, DIR_HG_BOOT])),
-                1 => (String::from(TXT_MNT_MAINVOL_ROOT), CommandAction::mount_mainvol(&self.partition_root, DIR_HG_ROOT)),
-                2 => (String::from(TXT_MNT_SUBVOLS), CommandAction::mount_subvols(&self.partition_root, &SUBVOLS_PART_ROOT)),
-                3 => (String::from(TXT_MNT_BOOT), CommandAction::mount(&self.partition_boot, DIR_HG_BOOT)),
-                4 => (String::from(TXT_PACKAGES_UPDATE), CommandAction::update_packages()),
-                5 => (String::from(TXT_USERS), CommandAction::set_users(&self.name_user, &self.name_full, &self.password_user, &self.password_root, &self.key_pub)),
-                6 => (String::from(TXT_FSTAB), CommandAction::zjenx_fstab()),
-                // 5 => (String::from(TXT_INSTALL_BOOTLOADER_BUILDER), CommandAction::eqstalx_packages(DEFAULT_BOOTLOADER)),
+                0 => (String::from(TXT_UMOUNT_SD_CARD), CommandAction::umount_drive(&self.drive)),
+                1 => (String::from(TXT_RM_PARTITIONS), CommandAction::remove_partitions_drive(&self.drive)),
+                2 => (String::from(TXT_DD_FIRST_MBS), CommandAction::dd_first_mbs(&self.drive)),
+                3 => (String::from(TXT_MKLABEL), CommandAction::make_label(&self.drive)),
+                4 => (String::from(TXT_MKBOOT), CommandAction::make_boot_partition(&self.drive, TYPE_FS_FAT32)),
+                5 => (String::from(TXT_MKROOT), CommandAction::make_root_partition(&self.drive, TYPE_FS_BTRFS)),
+                6 => (String::from(TXT_PARTPROBE), CommandAction::partprobe(&self.drive)),
+                7 => (String::from(TXT_MKVFAT), CommandAction::mkfs_vfat(&self.drive, PART_BOOT)),
+                8 => (String::from(TXT_MKBTRFS), CommandAction::mkfs_btrfs(&self.drive, PART_ROOT)),
+                9 => (String::from(TXT_MKDIR_MNTS), CommandAction::make_dirs(&[DIR_HG_ROOT, DIR_HG_BOOT])),
+                10 => (String::from(TXT_MNT_MAINVOL_ROOT), CommandAction::mount_mainvol(&self.partition_root, DIR_HG_ROOT)),
+                11 => (String::from(TXT_MKSUBVOL_ROOT), CommandAction::make_subvol(Path::new(DIR_SV_ROOT))),
+                12 => (String::from(TXT_MKSUBVOL_HOME), CommandAction::make_subvol(Path::new(DIR_SV_HOME))),
+                13 => (String::from(TXT_UMOUNT_ROOT), CommandAction::umount_volume(&self.partition_root)),
+                14 => (String::from(TXT_MNT_SUBVOLS), CommandAction::mount_subvols(&self.partition_root, &SUBVOLS_PART_ROOT)),
+                15 => (String::from(TXT_MNT_BOOT), CommandAction::mount(&self.partition_boot, DIR_HG_BOOT)),
+                16 => (String::from(TXT_DOWNLOAD_OS), CommandAction::wget(DIR_MNT, format!("{URL_ARMTIX_DL}{FILE_XZ_ARMTIX}").as_str())),
+                17 => (String::from(TXT_EXTRACTING_OS), CommandAction::extract_rootfs(format!("{DIR_MNT}{SLASH}{FILE_XZ_ARMTIX}").as_str(), DIR_HG_ROOT)),
+                18 => (String::from(TXT_BR_ARCH_GAP), CommandAction::bridge_arch_gap()),
+                19 => (String::from(TXT_PACKAGES_UPDATE), CommandAction::update_packages()),
+                20 => (String::from(TXT_USERS), CommandAction::set_users(&self.name_user, &self.name_full, &self.password_user, &self.password_root, &self.key_pub)),
+                21 => (String::from(TXT_FSTAB), CommandAction::zjenx_fstab()),
+                // 5 => (String::from(TXT_INSTALL_BOOTLOADER_BUILDER), CommandAction::eqstalx_bootloader_builder()),
                 // 6 => (String::from(TXT_INSTALL_BOOTLOADER), CommandAction::eqstalx_bootloader()),
                 //4 => (String::from(TXT_MOVE_BOOT), CommandAction::move_boot()),
                 //5 => (String::from(TXT_PACKAGES_INSTALL), CommandAction::eqstalx_packages(DEFAULT_PACKAGES)),

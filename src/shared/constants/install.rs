@@ -79,7 +79,7 @@ pub const TXT_UMOUNT_DIRS: &str = concatcp!("Unmount directories", DOTS);
 pub const URL_ARMTIX_DL: &str = "https://armtixlinux.org/images/";
 
 // filenames
-pub const FILE_XZ_ARMTIX: &str = "armtix-dinit-20240303.tar.xz";
+pub const FILE_XZ_ARMTIX: &str = "armtix-dinit-20240831.tar.xz";
 pub const FILE_QEMU_STATIC: &str = "qemu-aarch64-static";
 
 // main mount directory

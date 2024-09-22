@@ -14,10 +14,8 @@ use crate::shared::constants::char::{
 use crate::shared::constants::install::*;
 
 // General commands
-const ARTIX_CHROOT: &str = "artix-chroot";
 const TAR: &str = "tar";
 const BTRFS: &str = "btrfs";
-const CAT: &str = "cat";
 const CLEAR: &str = "clear";
 const CURL: &str = "curl";
 const DD: &str = "dd";
@@ -78,6 +76,7 @@ const ARL_NOCONFIRM: &str = "--noconfirm";
 const ARL_OWNER: &str = "--owner=";
 
 // command specific arguments
+const BOOT_SPACE: &str = "512M";
 const BS_1M: &str = "bs=1M";
 const COUNT_32: &str = "count=32";
 const EOF: &str = "EOF";
@@ -90,6 +89,7 @@ const OPTIMAL: &str = "optimal";
 const ROOT: &str = "root";
 const SINGLE: &str = "single";
 const SIZE: &str = "size";
+const STATUS_NONE: &str = "status=none";
 const START: &str = "start";
 const SUB_VOL_COMPRESS: &str = formatcp!("{MAIN_VOL_COMPRESS},subvol=");
 
@@ -111,10 +111,11 @@ pub const CLEANUP_DIRS: [&str; 10] = [
 ];
 
 // sh arguments
-const ASC_BOOT_SPACE: &str = "32M 512M";
+const ASC_BOOT_SPACE: &str = formatcp!("1MiB {BOOT_SPACE}");
 const ASC_BTRFS_SUCR: &str = formatcp!("{BTRFS} su cr");
 const ASC_CAT_SB: &str = formatcp!("{CAT} {DIR_SYS_BLOCK}");
-const ASC_END_SECTOR: &str = "\"${END_SECTOR}s\"";
+const ASC_DEL_LPT: &str = formatcp!("{BS_1M} {COUNT_32} {STATUS_NONE}");
+const ASC_END_SECTOR: &str = formatcp!("{BOOT_SPACE}"); // "\"${END_SECTOR}s\"";
 const ASC_MKDIR_P: &str = formatcp!("{MKDIR} {ARG_P}");
 const ASC_MKLABEL_GPT: &str = formatcp!("{MKLABEL} {GPT}");
 const ASC_MKPART_PRIMARY: &str = formatcp!("{MKPART} {PRIMARY}");
@@ -154,30 +155,30 @@ pub struct CommandAction {}
     
 impl CommandAction {
 
-    pub fn azjx_editor() -> Option<Command> {
+    pub fn azjx_editor() -> Vec<Command> {
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C)
         .arg(ASML_LUNARVIM);
-        Some(cmd)
+        vec![cmd]
     }
 
-    pub fn azjx_rezosur() -> Option<Command> {
-        Some(Command::new(TRUE))
+    pub fn azjx_rezosur() -> Vec<Command> {
+        vec![Command::new(TRUE)]
     }
 
-    pub fn eqstalx_bootloader() -> Option<Command> {
+    pub fn eqstalx_bootloader() -> Vec<Command> {
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C).arg(AHG_BOOTLOADER_INSTALL);
-        Some(cmd)
+        vec![cmd]
     }
  
-    pub fn eqstalx_fs() -> Option<Command> { 
+    pub fn eqstalx_fs() -> Vec<Command> { 
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C).arg(ASML_EQSTALX_FS);
-        Some(cmd)
+        vec![cmd]
     }
 
-    pub fn eqstalx_packages(packages: &str) -> Option<Command> {
+    pub fn eqstalx_packages(packages: &str) -> Vec<Command> {
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C);
         match Path::new(&format!("{DIR_HG_ROOT}/{LOC_DB_LOCK_PACMAN}")).exists() {
@@ -187,10 +188,10 @@ impl CommandAction {
             _ => {},
         }
         cmd.arg(format!("{AHG_PACMAN_INSTALL} {packages}"));
-        Some(cmd)
+        vec![cmd]
     }
     
-    pub fn bridge_arch_gap() -> Option<Command> {
+    pub fn bridge_arch_gap() -> Vec<Command> {
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C);
         let mut command_sh = String::new(); 
@@ -201,10 +202,10 @@ impl CommandAction {
             }
         }
         cmd.arg(command_sh);
-        Some(cmd)
+        vec![cmd]
     }
 
-    pub fn clean_up_install(arch: &str) -> Option<Command> {
+    pub fn clean_up_install(arch: &str) -> Vec<Command> {
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C);
         let mut command_sh = String::new(); 
@@ -214,45 +215,43 @@ impl CommandAction {
         }
         command_sh.push_str(format!("{RM} {ARG_R} {ARG_F} {DIR_MNT}/Manjaro-ARM-{arch}-latest.tar.gz*").as_str());
         cmd.arg(command_sh);
-        Some(cmd)
+        vec![cmd]
     }
 
-    pub fn clear() -> Option<Command> {
-        Some(Command::new(CLEAR))
+    pub fn clear() -> Vec<Command> {
+        vec![Command::new(CLEAR)]
     }
  
-    pub fn dd_first_mbs(path_drive: &Path) -> Option<Command> {
+    pub fn dd_first_mbs(path_drive: &Path) -> Vec<Command> {
         let dis_drive = path_drive.display();
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C);
-        cmd.arg(format!("{DD} {IF_DEV_ZERO} of={dis_drive} {BS_1M} {COUNT_32} {ASC_QUIET}"));
-        Some(cmd)
+        cmd.arg(format!("{DD} {IF_DEV_ZERO} of={dis_drive} {ASC_DEL_LPT}"));
+        vec![cmd]
     }
 
-    pub fn extract_rootfs(loc_file: &str, dir_dest: &str) -> Option<Command> {
+    pub fn extract_rootfs(loc_file: &str, dir_dest: &str) -> Vec<Command> {
         let mut dir_end = String::from(dir_dest);
         dir_end.push_str(DIR_VAR_TMP);
-
-        info!("path: {}", dir_end);
 
         match Path::new(&dir_end).exists() {
             false => {
                 let mut cmd = Command::new(SUDO);
                 cmd.args(ARG_SH_C)
                 .arg(format!("{ASC_TAR} {loc_file} {ARGS_C} {dir_dest}"));
-                Some(cmd)
+                vec![cmd]
             },
-            true => None,
+            true => vec![]
         }
     }
 
-    pub fn update_packages() -> Option<Command> {
+    pub fn update_packages() -> Vec<Command> {
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C).arg(AHG_PACMAN_UPDATE);
-        Some(cmd)
+        vec![cmd]
     }
 
-    pub fn make_dirs(dirs: &[&str]) -> Option<Command> {
+    pub fn make_dirs(dirs: &[&str]) -> Vec<Command> {
         let dirs: Vec<&Path> = dirs.iter().filter_map(|dir| {
             let dir = Path::new(dir);
             match dir.exists() {
@@ -262,7 +261,7 @@ impl CommandAction {
         }).collect::<Vec<&Path>>();
         
         match dirs.is_empty() {
-            true => None,
+            true => vec![],
             false => {
                 let mut cmd = Command::new(SUDO);
                 cmd.args(ARG_SH_C).
@@ -272,82 +271,77 @@ impl CommandAction {
                         (_, dir) => format!("{ASC_MKDIR_P} {}", dir.display()),
                     }
                 }).collect::<String>());
-                Some(cmd)
+                vec![cmd]
             },
         }
     }
 
-    pub fn make_label(drive: &Path) -> Option<Command> {
+    pub fn make_label(drive: &Path) -> Vec<Command> {
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C)
         .arg(format!("{ASC_PARTED_S} {} {ASC_MKLABEL_GPT} {ASC_QUIET}", drive.display()));
-        Some(cmd)
+        vec![cmd]
     }
 
-    pub fn make_boot_partition(drive: &Path, partition_type: &str) -> Option<Command> { 
+    pub fn make_boot_partition(drive: &Path, partition_type: &str) -> Vec<Command> { 
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C)
         .arg(format!("{ASC_PARTED_OPT} {} {ASC_MKPART_PRIMARY} {partition_type} {ASC_BOOT_SPACE} {ASC_QUIET}", drive.display()));
-        Some(cmd)
+        vec![cmd]
     }
 
-    pub fn make_root_partition(drive: &Path, partition_type: &str, partition_prev: u32) -> Option<Command> {
+    pub fn make_root_partition(drive: &Path, partition_type: &str) -> Vec<Command> {
         match drive.file_name().unwrap().to_str() {
-            Some(device) => {
-                let calc = format!("START=`{ASC_CAT_SB}/{device}/{device}{partition_prev}/{START}`; \
-                    SIZE=`{ASC_CAT_SB}/{device}/{device}{partition_prev}/{SIZE}`; \
-                    END_SECTOR=$(expr $START + $SIZE);");
+            Some(_) => {
 
                 let mut cmd = Command::new(SUDO);
                 cmd.args(ARG_SH_C)
-                .arg(format!("{} {ASC_PARTED_OPT} {} {ASC_MKPART_PRIMARY} {} {ASC_END_SECTOR} {C_PERCENT} {ASC_QUIET}", 
-                    calc, drive.display(), partition_type));
-                info!("calc cmd:{:?}", cmd);
-                Some(cmd)
+                .arg(format!("{ASC_PARTED_OPT} {} {ASC_MKPART_PRIMARY} {} {ASC_END_SECTOR} {C_PERCENT} {ASC_QUIET}", 
+                    drive.display(), partition_type));
+                vec![cmd]
             },
-            None => panic!("Cannot unwrap device name")
+            _ => panic!("Cannot unwrap device name")
         }
-
     }
 
-    pub fn make_subvol(drive: &Path) -> Option<Command> {
+    pub fn make_subvol(drive: &Path) -> Vec<Command> {
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C)
         .arg(format!("{ASC_BTRFS_SUCR} {} {ASC_QUIET}", drive.display()));
-        Some(cmd)
+        vec![cmd]
     }
 
-    pub fn mkfs_btrfs(drive: &Path, partition: u32) -> Option<Command> {
+    pub fn mkfs_btrfs(drive: &Path, partition: u32) -> Vec<Command> {
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C)
         .arg(format!("{MKFS_BTRFS} {ARG_M} {SINGLE} {ARGS_L} {LABEL_ROOT_AND_HOME} {ARG_F} {}{partition} {ASC_QUIET}", drive.display()));
-        Some(cmd)
+        vec![cmd]
     }
 
-    pub fn mkfs_vfat(drive: &Path, partition: u32) -> Option<Command> {
+    pub fn mkfs_vfat(drive: &Path, partition: u32) -> Vec<Command> {
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C); 
         cmd.arg(format!("{MKFS_VFAT} {ARG_N} {LABEL_BOOT} {}{partition} {ASC_QUIET}", drive.display()));
-        Some(cmd)
+        vec![cmd]
     }
 
-    pub fn mount(drive: &Path, dir: &str) -> Option<Command> {
+    pub fn mount(drive: &Path, dir: &str) -> Vec<Command> {
         let mut cmd = Command::new(SUDO);
         cmd.arg(MOUNT)
         .arg(format!("{}", drive.display()))
         .arg(dir);
-        Some(cmd)
+        vec![cmd]
     }
 
-    pub fn mount_mainvol(partition: &Path, dir: &str) -> Option<Command> {
+    pub fn mount_mainvol(partition: &Path, dir: &str) -> Vec<Command> {
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C)
         .arg(format!("{ASC_MOUNT_O} {MAIN_VOL_COMPRESS} {} {}", 
             partition.display(), dir));
-        Some(cmd)
+        vec![cmd]
     }
 
-    pub fn mount_subvols(partition: &Path, subvols: &[(&str, &str)]) -> Option<Command> {
+    pub fn mount_subvols(partition: &Path, subvols: &[(&str, &str)]) -> Vec<Command> {
         let mut command_sh = String::new();
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C);
@@ -362,30 +356,31 @@ impl CommandAction {
             }
         }
         cmd.arg(command_sh);
-        Some(cmd)
+        vec![cmd]
     }
 
-    pub fn move_boot() -> Option<Command> {
+    pub fn move_boot() -> Vec<Command> {
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C)
         .arg(ASC_MV_BOOT);
-        Some(cmd)
+        vec![cmd]
     }
 
-    pub fn partprobe(drive: &Path) -> Option<Command> {
+    pub fn partprobe(drive: &Path) -> Vec<Command> {
         let command_sh = format!("{} {} {}", PARTPROBE, drive.display(), ASC_QUIET);
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C)
             .arg(command_sh.clone());
-        Some(cmd)
+        vec![cmd]
     }
 
-    pub fn remove_partitions_drive(drive: &Path) -> Option<Command> {
+    pub fn remove_partitions_drive(drive: &Path) -> Vec<Command> {
         let dis_drive = drive.display();
         let list_pts = ListFromCommand::partition_numbers(drive);
+        debug!("list_pts: {:?}", list_pts);
 
         match list_pts.len() {
-            0 => None,
+            0 => vec![],
              _ => {
                 let mut cmd = Command::new(SUDO); 
                 cmd.args(ARG_SH_C);
@@ -396,12 +391,12 @@ impl CommandAction {
                     }
                 }).collect();
                 cmd.arg(sh_remove);
-                Some(cmd)        
+                vec![cmd]        
             }
         }
     }
 
-    pub fn set_settings_system(region_timezone: &str, zone_timezone: &str, locale: &str, keymap: &str, name_host: &str) -> Option<Command> {
+    pub fn set_settings_system(region_timezone: &str, zone_timezone: &str, locale: &str, keymap: &str, name_host: &str) -> Vec<Command> {
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C)
         .arg(format!("{ARTIX_CHROOT} {DIR_HG_ROOT} {LN} {ARG_S} {ARG_F} /usr/share/zoneinfo/timezone/{region_timezone}/{zone_timezone} /etc/localtime; \
@@ -412,80 +407,79 @@ impl CommandAction {
         {ARTIX_CHROOT} {DIR_HG_ROOT} {LOCALE_GEN} \
         {ARTIX_CHROOT} {DIR_HG_ROOT} {name_host} | {TEE} {ARG_A} {LOC_HOSTNAME} \
         "));
-        Some(cmd)
+        vec![cmd]
     }
 
-    pub fn set_users(user: &str, name_full: &str, password_user: &str, password_root: &str, key_pub_user: &str) -> Option<Command> {
+    pub fn set_users(user: &str, name_full: &str, password_user: &str, password_root: &str, key_pub_user: &str) -> Vec<Command> {
         let mut cmd = Command::new(SUDO);
-        cmd.args(ARG_SH_C)
+        cmd.args(ARG_SH_C)  
         .arg(format!("{ARTIX_CHROOT} {DIR_HG_ROOT} {GROUPMOD} {ARG_N} {user} {DEFAULT_USERGROUP_USER}; \
-        {ARTIX_CHROOT} {DIR_HG_ROOT} {USERMOD} {ARG_A} {ARGS_G} \
-        {DEFAULT_USERGROUPS} {ARG_P} {password_user} {ARG_S} {DEFAULT_SHELL} \
-        {ARG_L} {user} {ARG_C} {name_full} {ARG_M} {ARG_D} /home/{user} {DEFAULT_USERNAME}; \
-        {INSTALL} {ARL_DIR} {ARL_OWNER}{user} {ARL_GROUP}{user} {ARG_MOD700} {DIR_HG_ROOT}/home/{user}/.ssh; \
-        {INSTALL} {ARL_OWNER}{user} {ARL_GROUP}{user} {ARG_MOD600} {DIR_HG_ROOT}/home/{user}/authorized_keys; \
-        {ECHO} {DIR_HG_ROOT}/.ssh/{key_pub_user} | {TEE} {ARG_A} {DIR_HG_ROOT}/home/{user}/authorized_keys {ASC_QUIET}; \
-        {INSTALL} {ARL_OWNER}{user} {ARL_GROUP}{user} {ARG_MOD644} {LOC_PROFILE} {DIR_HG_ROOT}/home/{user}/.profile; \
-        {ARTIX_CHROOT} {DIR_HG_ROOT} {USERMOD} {ARG_P} {password_root} {ROOT} \
+            {ARTIX_CHROOT} {DIR_HG_ROOT} {USERMOD} {ARG_L} {user} {DEFAULT_USERNAME} \
+            {ARG_A} {ARGS_G} {DEFAULT_USERGROUPS} {ARG_P} {password_user} {ARG_S} {DEFAULT_SHELL} \
+            {ARG_M} {ARG_D} /home/{user} {ARG_C} \"{name_full}\"; \
+            {ARTIX_CHROOT} {DIR_HG_ROOT} {INSTALL} {ARL_DIR} {ARL_OWNER}{user} {ARL_GROUP}{user} {ARG_MOD700} /home/{user}/.ssh; \
+            {ARTIX_CHROOT} {DIR_HG_ROOT} {INSTALL} {ARL_OWNER}{user} {ARL_GROUP}{user} {ARG_MOD600} /home/{user}/.ssh/authorized_keys; \
+            {ECHO} {key_pub_user} | {TEE} {ARG_A} {DIR_HG_ROOT}/home/{user}/.ssh/authorized_keys {ASC_QUIET}; \
+            {ARTIX_CHROOT} {DIR_HG_ROOT} {INSTALL} {ARL_OWNER}{user} {ARL_GROUP}{user} {ARG_MOD644} {LOC_PROFILE} /home/{user}/.profile; \
+            {ARTIX_CHROOT} {DIR_HG_ROOT} {USERMOD} {ARG_P} {password_root} {ROOT} \
         "));
-        Some(cmd)
+        vec![cmd]
     }
 
-    pub fn setup_keymap(keymap: &str, keyvar: &str) -> Option<Command> {
+    pub fn setup_keymap(keymap: &str, keyvar: &str) -> Vec<Command> {
         let mut cmd = Command::new(SUDO);
         cmd.arg(SETUP_KEYMAP).arg(keymap).arg(keyvar);
-        Some(cmd)
+        vec![cmd]
     }
 
     /*
-    pub fn setup_keyrings() -> Option<Command> { 
+    pub fn setup_keyrings() -> Vec<Command> { 
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C)
         .arg(ASML_PACMAN_KEY);
-        Some(cmd)
+        vec![cmd]
     }
     */
 
-    pub fn _show_elapsed_time() -> Option<Command> {
-        Some(Command::new(TRUE))
+    pub fn _show_elapsed_time() -> Vec<Command> {
+        vec![Command::new(TRUE)]
     }
        
-    pub fn umount(path: &Path) -> Option<Command> { 
+    pub fn umount_volume(path: &Path) -> Vec<Command> { 
         match CommandAction::is_mounted(path) {
             true => {
                 let mut cmd = Command::new(SUDO);
                 cmd.arg(UMOUNT)
                 .arg(format!("{}", path.display()));
-                Some(cmd)
+                vec![cmd]
             } 
-            false => None,
+            false => vec![],
         }
     }
 
-    pub fn umount_drive(drive: &Path) -> Option<Command> { 
-        let dis_drive = drive.display();
-        let list_pts = ListFromCommand::mounted_partitions(drive);
+    pub fn umount_drive(drive: &Path) -> Vec<Command> { 
+        let list_pts = ListFromCommand::mounted_volumes(drive);
 
-        info!("list_pts: {:?}", list_pts);
+        debug!("list_pts: {:?}", list_pts);
 
         match list_pts.len() {
-            0 => None,
+            0 => vec![],
              _ => {
                 let mut cmd = Command::new(SUDO); 
                 cmd.args(ARG_SH_C);
                 let sh_remove: String = list_pts.iter().with_position().map(|e| {
                     match e {
-                        (Position::First, partition) | (Position::Middle, partition) => format!("{UMOUNT} {dis_drive}{partition} {ASC_QUIET}; "),
-                        (_, partition) => format!("{UMOUNT} {dis_drive}{partition} {ASC_QUIET}"),
+                        (Position::First, partition) | (Position::Middle, partition) => format!("{UMOUNT} {partition} {ASC_QUIET}; "),
+                        (_, partition) => format!("{UMOUNT} {partition} {ASC_QUIET}"),
                     }
                 }).collect();
                 cmd.arg(sh_remove);
-                Some(cmd)        
+                vec![cmd]        
             }
         }
     }
 
-    pub fn umount_dirs(dirs: &[&str]) -> Option<Command> {
+    pub fn umount_dirs(dirs: &[&str]) -> Vec<Command> {
         let mut cmd = Command::new(SUDO);
         cmd.args(ARG_SH_C);
        
@@ -497,30 +491,31 @@ impl CommandAction {
         }).collect();
 
         cmd.arg(sh_command);
-        Some(cmd)
+        vec![cmd]
     }
 
-    pub fn wget(dir_end: &str, url_download: &str) -> Option<Command> {
+    pub fn wget(dir_end: &str, url_download: &str) -> Vec<Command> {
         match Path::new(&format!("{dir_end}/{FILE_XZ_ARMTIX}")).exists() {
-            true => None,
+            true => vec![],
             false => {
                 let mut cmd = Command::new(SUDO);
                 cmd.current_dir(dir_end);
                 cmd.args([WGET, ARG_Q, url_download]);
-                Some(cmd)
+                vec![cmd]
             },
         }
     }
 
-    pub fn zjenx_fstab() -> Option<Command> {
-        let mut cmd = Command::new(SUDO);
-        cmd.args(ARG_SH_C).arg(AHG_FSTABGEN);
-        Some(cmd)
+    pub fn zjenx_fstab() -> Vec<Command> {
+        let mut cmd_fstab = Command::new(SUDO);
+        cmd_fstab.args(ARG_SH_C).arg(AHG_FSTABGEN);
+        let mut cmd_tee = Command::new(SUDO);
+        cmd_tee.arg(TEE).arg("{DIR_HG_ROOT}/etc/fstab");
+        vec![cmd_fstab, cmd_tee]
     }
 
     fn is_mounted(path: &Path) -> bool { 
-        let list_pts = ListFromCommand::mounted_all();
-        info!("list_pts: {:?}", list_pts);
+        let list_pts = ListFromCommand::mounted_volumes_all();
         list_pts.contains(&String::from(path.to_str().unwrap()))
     } 
 }

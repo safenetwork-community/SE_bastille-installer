@@ -1,7 +1,13 @@
 use const_format::formatcp;
 
 // General commands
+pub const ARTIX_CHROOT: &str = "artix-chroot";
+pub const AWK: &str = "awk";
+pub const CAT: &str = "cat";
+pub const ID: &str = "id";
+pub const LS: &str = "ls";
 pub const LSBLK: &str = "lsblk";
+pub const PARTED: &str = "parted";
 pub const RM: &str = "rm";
 pub const SH: &str = "sh"; 
 pub const SUDO: &str = "sudo";

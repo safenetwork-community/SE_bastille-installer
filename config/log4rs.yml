@@ -1,0 +1,12 @@
+appenders:
+  lohg_eqfo:
+    kind: file
+    path: "log/eqstalxr_bastij.log"
+    append: false
+    encoder:
+      pattern: "{d(%Y-%m-%d %H:%M:%S)} | {({l}):5.5} | {f}:{L} - {m}{n}"
+
+root:
+  level: debug
+  appenders:
+    - lohg_eqfo

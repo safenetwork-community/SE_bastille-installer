@@ -4,10 +4,12 @@ pub mod r#type;
 
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
+use std::process::{Child, Output, Stdio};
 use std::time::Duration;
 use std::thread::sleep;
 
 use dialog::{backends::Dialog, Choice};
+use itertools::{Itertools,Position};
 use regex::RegexSet;
 
 use crate::app::commands::execute::CommandExecute;
@@ -66,6 +68,7 @@ impl HandlerBox for BoxMenuDevice<'_> {
                 *self.name_device = device;
                 self.next()
             },
+            #[allow(non_snake_case)]
             (Choice::Yes, None) => Page::EmptyMenu,
             (Choice::Escape, _) => Page::Escape,
             (Choice::Cancel, _) => self.previous(),
@@ -109,6 +112,7 @@ impl HandlerBox for BoxMenuDrive<'_> {
                 *self.name_drive = drive;
                 self.next()
             },
+            #[allow(non_snake_case)]
             (Choice::Yes, None) => Page::EmptyMenu,
             (Choice::Escape, _) => Page::Escape,
             (Choice::Cancel, _) => self.previous(),
@@ -137,7 +141,6 @@ impl HandlerPage for BoxMenuDrive<'_> {
         }
     }
 }
-
 
 
 pub struct BoxInputUsername<'a> {
@@ -727,45 +730,99 @@ pub struct BoxGaugeInstallation<'a> {
 
 impl HandlerGauge for BoxGaugeInstallation<'_> {
     fn handle(&mut self) -> Page {
-        
+        let mut ps_child: Child; 
+        //let mut ps_child_one: Child; 
+        let mut result_command: Output; 
+        let mut display_command: OsString; 
         let c_total = self.builder_list_command.len();
 
         for c_done in 0..c_total {
             let percent: u8 = (c_done * 100 / c_total) as u8;
             
-            let (text, some_command) = self.builder_list_command.get_method(c_done);
+            let (text, mut subcommands) = self.builder_list_command.get_method(c_done);
 
             BoxGauge::show(text.as_str(), percent);
             sleep(Duration::from_millis(900));
-            match some_command {
-                Some(mut command) => { 
-                    let mut display_command :OsString = OsString::from(command.get_program());
-                        display_command.push(" ");
-                        display_command.push(command.get_args()
-                        .collect::<Vec<_>>()
-                        .join(OsStr::new(" ")));  
-                    let result_command = command
+            
+            for (pos, command) in subcommands.iter_mut().with_position() {
+                display_command = OsString::from(command.get_program());
+                display_command.push(" ");
+                display_command.push(command.get_args()
+                .collect::<Vec<_>>()
+                .join(OsStr::new(" ")));
+                debug!("{}, display_command:{:?}", c_done, display_command.clone().into_string());
+
+                match pos {
+                    Position::Only => {
+                        result_command = command
                         .output()
                         .unwrap_or_else(|e| panic!("Failed to execute process:\n\n{:?}\n{}", display_command, e));
-                    info!("display_command:{:?}", display_command.clone().into_string());
-                    info!("result_command:{:?}", result_command);
-
-                    match result_command.status.success() {
-                        false => {
-                           *self.msg_error = format!("Error step: {}\nProcess returned an error:\n\n{:?}\n\nOutput stderr:\n\n{}",
-                                c_done,
-                                display_command,  
-                                String::from_utf8(result_command.stderr).map_err(|non_utf8| 
-                                String::from_utf8_lossy(non_utf8.as_bytes()).into_owned()).unwrap()); 
-                            return Page::FailedCommand;
-                        }
-                        true => continue,
                     }
+                    Position::First => {
+                        cmd!("echo", "hi").run()?;
+                        /*
+                        ps_child_one = command
+                            .stdout(Stdio::piped())
+                            .spawn()
+                            .unwrap_or_else(|e| panic!("Failed to execute process:\n\n{:?}\n{}", display_command, e));
+                        */
+                    },
+                    Position::Middle => {
+                        cmd!("echo", "hi").run()?;
+                        /*
+                        ps_child = command
+                            .stdin(Stdio::from(ps_child_one.stdout.unwrap()))
+                            .stdout(Stdio::piped())
+                            .spawn()
+                            .unwrap_or_else(|e| panic!("Failed to execute process:\n\n{:?}\n{}", display_command, e));
+                        */
+                    },
+                    Position::Last => {
+                        cmd!("echo", "hi").run()?;
+                        /*
+                        result_command = command
+                        .output()
+                        .unwrap_or_else(|e| panic!("Failed to execute process:\n\n{:?}\n{}", display_command, e));
+                        */
+                    },
+                }
+            }
+            
+            match c_done {
+                19 => {
+                    debug!("home: {:?}", ListFromCommand::ls(Path::new("/home/folaht")));
+                    debug!("ssh key: {:?}", ListFromCommand::cat(Path::new("/home/folaht/.ssh/authorized_keys")));
                 },
-                None => {},
-            }    
-        }
+                _ => {}
+            }
+            match String::from_utf8(result_command.stderr.clone()) {
+                Ok(string) => {
+                    match string.as_str() {
+                        "" => {
+                            debug!("{}, result_command:{:?}", c_done, result_command);
+                        }
+                        _ => {
+                            error!("{}, result_command:{:?}", c_done, result_command);
+                        }
+                    }
+                }
+                Err(e) => {
+                    panic!("Failed to read command result standard error:\n\n{}", e);
+               }               
+            }
 
+            match result_command.status.success() {
+                false => {
+                   *self.msg_error = format!("Error step: {}\nProcess returned an error:\n\n{:?}\n\nOutput stderr:\n\n{}",
+                        c_done,
+                        display_command,  
+                        String::from_utf8(result_command.stderr).map_err(|non_utf8| 
+                        String::from_utf8_lossy(non_utf8.as_bytes()).into_owned()).unwrap()); 
+                    return Page::FailedCommand;
+                }
+                true => continue,
+            }
+        }
         Page::Finish
     }
 }
