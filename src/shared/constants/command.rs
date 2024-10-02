@@ -1,11 +1,7 @@
-use const_format::formatcp;
-
 // General commands
 pub const ARTIX_CHROOT: &str = "artix-chroot";
 pub const AWK: &str = "awk";
 pub const CAT: &str = "cat";
-pub const ID: &str = "id";
-pub const LS: &str = "ls";
 pub const LSBLK: &str = "lsblk";
 pub const PARTED: &str = "parted";
 pub const RM: &str = "rm";
@@ -22,8 +18,6 @@ pub const TWO_GN_ONE: &str = "2>&1";
 // Shell arguments
 pub const ARG_C: &str = "-c";
 pub const EOA: &str = "--";
-pub const ARG_SH_C: [&str; 3] = [EOA, SH, ARG_C];
 
 // general sh -c arguments
-pub const ASC_QUIET: &str = formatcp!("");
 //pub const ASC_QUIET: &str = formatcp!("{ONE_G} {DEV_NULL} {TWO_GN_ONE}");

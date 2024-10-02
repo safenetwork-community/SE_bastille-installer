@@ -10,7 +10,7 @@ authors = ["Folât Pjêrsômêj"]
 anyhow = "1.0"
 const_format = { version = "0.2", features = ["rust_1_64"]}
 dialog = { git = "https://github.com/safenetwork-community/dialog-rs.git" }
-duct = 0.13
+duct = "0.13"
 itertools = "0.12.1"
 log = "0.4"
 log4rs = "1.3"

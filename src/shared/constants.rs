@@ -1,4 +1,3 @@
-pub mod char;
 pub mod command;
 pub mod dbox;
 pub mod error;

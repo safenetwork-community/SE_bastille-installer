@@ -1,13 +1,12 @@
 use const_format::{concatcp, formatcp};
 
-use crate::shared::constants::char::SLASH;
-
 // general
 pub const DOTS: &str = "..";
+pub const COMMA_SPACE: &str = "; ";
 
 // install defaults
 pub const DEFAULT_ARCH: &str = "aarch64";
-pub const DEFAULT_BOOTLOADER: &str = "grub";
+// pub const DEFAULT_BOOTLOADER: &str = "grub";
 pub const DEFAULT_CONSOLEFONT: &str = "eurlatingr";
 pub const DEFAULT_EDITOR: &str = "lunarvim";
 pub const DEFAULT_URL_EDITOR: &str = "https://raw.githubusercontent.com/LunarVim/LunarVim/release-1.3/neovim-0.9/utils/installer/install.sh";
@@ -81,6 +80,8 @@ pub const URL_ARMTIX_DL: &str = "https://armtixlinux.org/images/";
 // filenames
 pub const FILE_XZ_ARMTIX: &str = "armtix-dinit-20240831.tar.xz";
 pub const FILE_QEMU_STATIC: &str = "qemu-aarch64-static";
+pub const FILE_MAHRK_IMAZJ_KOQSTRUE: &str = "mahrk_imazj_koqstrue";
+pub const FILE_MAHRK_IMAZJ_DATIZJE: &str = "mahrk_imazj_datizje";
 
 // main mount directory
 pub const DIR_MNT:  &str = "/var/tmp/eqstalxr-bastij";
@@ -95,16 +96,16 @@ pub const PART_BOOT: u32 = 1;
 pub const PART_ROOT: u32 = 2;
 
 // volume dirs
-pub const DIR_HG_BOOT: &str = concatcp!(DIR_MNT, SLASH, BOOT);
-pub const DIR_HG_ROOT: &str = concatcp!(DIR_MNT, SLASH, ROOT);
-pub const DIR_HG_HOME: &str = concatcp!(DIR_HG_ROOT, SLASH, HOME);
+pub const DIR_HG_BOOT: &str = formatcp!("{DIR_MNT}/{BOOT}");
+pub const DIR_HG_ROOT: &str = formatcp!("{DIR_MNT}/{ROOT}");
+pub const DIR_HG_HOME: &str = formatcp!("{DIR_HG_ROOT}/{HOME}");
 
 // subvolume dirs
 pub const DIR_END_SV_ROOT: &str ="@";
 pub const DIR_END_SV_HOME: &str = "@home";
 
-pub const DIR_SV_ROOT: &str = concatcp!(DIR_HG_ROOT, SLASH, DIR_END_SV_ROOT);
-pub const DIR_SV_HOME: &str = concatcp!(DIR_HG_ROOT, SLASH, DIR_END_SV_HOME);
+pub const DIR_SV_ROOT: &str = formatcp!("{DIR_HG_ROOT}/{DIR_END_SV_ROOT}");
+pub const DIR_SV_HOME: &str = formatcp!("{DIR_HG_ROOT}/{DIR_END_SV_HOME}");
 
 pub const SUBVOLS_PART_ROOT: [(&str, &str); 2] = [(DIR_END_SV_ROOT, DIR_HG_ROOT), (DIR_END_SV_HOME, DIR_HG_HOME)];
 
@@ -114,23 +115,25 @@ pub const LABEL_ROOT_AND_HOME: &str = "BASTIJ_FUT";
 
 // installation directories
 pub const DIR_HOME:  &str = "/home/bas";
-pub const DIR_SYS_BLOCK: &str = "/sys/block";
+// pub const DIR_SYS_BLOCK: &str = "/sys/block";
 pub const DIR_USR_BIN: &str = "/usr/bin";
-pub const DIR_VAR_TMP: &str = "/var/tmp";
 
 // istallation locations
 pub const LOC_BINFMT_AARCH64: &str = "/usr/lib/binfmt.d/qemu-aarch64-static.conf";
 pub const LOC_BINFMT_REGISTER: &str = "/proc/sys/fs/binfmt_misc/register";
 pub const LOC_DEFAULT_BINFMT_ARCH: &str = "/proc/sys/fs/binfmt_misc/qemu-aarch64";
-pub const LOC_FSTAB: &str = "/etc/fstab";
 pub const LOC_HOSTNAME: &str = "/etc/hostname";
-pub const LOC_PROFILE: &str = concatcp!(DIR_HOME, SLASH, ".profile");
+pub const LOC_FSTAB: &str = "/etc/fstab";
+pub const LOC_PROFILE: &str = formatcp!("{DIR_HOME}/.profile");
 pub const LOC_LOCALE_CONF: &str = "/etc/locale.conf";
 pub const LOC_LOCALE_GEN: &str = "/etc/locale.gen";
 pub const LOC_MKINITCPIO_STS: &str = "/etc/mkinitcpio.d/linux-aarch64.preset";
-pub const LOC_QEMU_USER_STATIC: &str = concatcp!(DIR_USR_BIN, SLASH, FILE_QEMU_STATIC);
+pub const LOC_QEMU_USER_STATIC: &str = formatcp!("{DIR_USR_BIN}/{FILE_QEMU_STATIC}");
 pub const LOC_VCONSOLE_CONF: &str = "/etc/vconsole.conf";
 pub const LOC_DB_LOCK_PACMAN: &str = "/var/lib/pacman/db.lck";
 
 // Host -> Guest installation directories 
-pub const LOC_HG_QEMU_USER_STATIC: &str = concatcp!(DIR_HG_ROOT, DIR_USR_BIN, SLASH, FILE_QEMU_STATIC);
+pub const LOC_HG_QEMU_USER_STATIC: &str = formatcp!("{DIR_HG_ROOT}{DIR_USR_BIN}/{FILE_QEMU_STATIC}");
+pub const LOC_HG_MAHRK_IMAZJ_KOQSTRUE: &str = formatcp!("{DIR_HG_ROOT}/{FILE_MAHRK_IMAZJ_KOQSTRUE}");
+pub const LOC_HG_MAHRK_IMAZJ_DATIZJE: &str = formatcp!("{DIR_HG_ROOT}/{FILE_MAHRK_IMAZJ_DATIZJE}");
+pub const LOC_HG_FSTAB: &str = formatcp!("{DIR_HG_ROOT}{LOC_FSTAB}");
