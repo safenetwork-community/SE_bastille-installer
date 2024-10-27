@@ -2,22 +2,28 @@ use const_format::{concatcp, formatcp};
 
 // general
 pub const DOTS: &str = "..";
-pub const COMMA_SPACE: &str = "; ";
 
 // install defaults
-pub const DEFAULT_ARCH: &str = "aarch64";
+// pub const DEFAULT_ARCH: &str = "aarch64";
 // pub const DEFAULT_BOOTLOADER: &str = "grub";
 pub const DEFAULT_CONSOLEFONT: &str = "eurlatingr";
 pub const DEFAULT_EDITOR: &str = "lunarvim";
-pub const DEFAULT_URL_EDITOR: &str = "https://raw.githubusercontent.com/LunarVim/LunarVim/release-1.3/neovim-0.9/utils/installer/install.sh";
-pub const DEFAULT_PACKAGES: &str = "cargo neovim kitty-terminfo"; 
+pub const DEFAULT_INIT: &str = "dinit";
+// pub const DEFAULT_PACKAGE_BOOTLOADER_GRUB: &str = "grub os-prober efibootmgr"; 
 pub const DEFAULT_PACKAGE_FS: &str = "btrfs-progs"; 
-pub const DEFAULT_OS_FLAVOR: &str = "Bastille OS";
+pub const DEFAULT_PACKAGES: &str = "cargo neovim kitty-terminfo"; 
 pub const DEFAULT_OS_BASE: &str = "Artix";
+pub const DEFAULT_OS_FLAVOR: &str = "Bastille OS";
 pub const DEFAULT_SHELL: &str = "/bin/bash";
+pub const DEFAULT_URL_EDITOR: &str = "https://raw.githubusercontent.com/LunarVim/LunarVim/release-1.3/neovim-0.9/utils/installer/install.sh";
 pub const DEFAULT_USERGROUP_USER: &str = "armtix"; 
 pub const DEFAULT_USERGROUPS: &str = "wheel,sys,audio,input,video,storage,lp,network,users,power"; 
 pub const DEFAULT_USERNAME: &str = "armtix";
+
+// bootloader types
+// pub const BL_COREBOOT: &str = "coreboot";
+// pub const BL_U_BOOT: &str = "u-boot";
+// pub const BL_UEFI: &str = "uefi";
 
 // filesystem types
 pub const TYPE_FS_FAT32: &str = "fat32";
@@ -37,12 +43,12 @@ pub const TXT_MKROOT: &str = concatcp!("Make root partition", DOTS);
 pub const TXT_MKVFAT: &str = concatcp!("Make vfat", DOTS);
 pub const TXT_MKBTRFS: &str = concatcp!("Make btrfs", DOTS);
 pub const TXT_MKDIR_MNTS: &str = concatcp!("Create mount dirs", DOTS);
-pub const TXT_MKSUBVOL_HOME: &str = concatcp!("Create subvolume home", DOTS);
-pub const TXT_MKSUBVOL_ROOT: &str = concatcp!("Create subvolume root", DOTS);
-pub const TXT_MNT_BOOT: &str = concatcp!("Mount boot", DOTS);
+// pub const TXT_MKSUBVOL_HOME: &str = concatcp!("Create subvolume home", DOTS);
+// pub const TXT_MKSUBVOL_ROOT: &str = concatcp!("Create subvolume root", DOTS);
+// pub const TXT_MNT_BOOT: &str = concatcp!("Mount boot", DOTS);
 pub const TXT_MNT_MAINVOL_ROOT: &str = concatcp!("Mount root for subvolumes", DOTS);
 pub const TXT_MNT_SUBVOLS: &str = concatcp!("Mount subvolumes", DOTS);
-pub const TXT_MOVE_BOOT: &str = concatcp!("Move extracted boot files to boot partition", DOTS);
+// pub const TXT_MOVE_BOOT: &str = concatcp!("Move extracted boot files to boot partition", DOTS);
 pub const TXT_RM_PARTITIONS: &str = concatcp!("Prepare drive partitions", DOTS);
 pub const TXT_UMOUNT_ROOT: &str = concatcp!("Unmount root", DOTS);
 pub const TXT_UMOUNT_SD_CARD: &str = concatcp!("Unmount partitions SD card", DOTS);
@@ -54,8 +60,7 @@ pub const TXT_DOWNLOAD_OS: &str = formatcp!("Downloading latest version of {DEFA
 pub const TXT_EXTRACTING_OS: &str = formatcp!("Extracting {DEFAULT_OS_BASE}{}", DOTS);
 
 // install bootloader texts
-pub const TXT_INSTALL_BOOTLOADER_BUILDER: &str = concatcp!("Installing bootloader builder", DOTS);
-pub const TXT_INSTALL_BOOTLOADER: &str = concatcp!("Installing bootloader", DOTS);
+// pub const TXT_INSTALL_BOOTLOADER: &str = concatcp!("Installing bootloader", DOTS);
 
 // setup os texts
 pub const TXT_EDITOR: &str = formatcp!("Installing base editor {DEFAULT_EDITOR}{}", DOTS);
@@ -96,7 +101,7 @@ pub const PART_BOOT: u32 = 1;
 pub const PART_ROOT: u32 = 2;
 
 // volume dirs
-pub const DIR_HG_BOOT: &str = formatcp!("{DIR_MNT}/{BOOT}");
+pub const DIR_HG_BOOT: &str = formatcp!("{DIR_MNT}/{ROOT}/{BOOT}");
 pub const DIR_HG_ROOT: &str = formatcp!("{DIR_MNT}/{ROOT}");
 pub const DIR_HG_HOME: &str = formatcp!("{DIR_HG_ROOT}/{HOME}");
 
@@ -106,8 +111,6 @@ pub const DIR_END_SV_HOME: &str = "@home";
 
 pub const DIR_SV_ROOT: &str = formatcp!("{DIR_HG_ROOT}/{DIR_END_SV_ROOT}");
 pub const DIR_SV_HOME: &str = formatcp!("{DIR_HG_ROOT}/{DIR_END_SV_HOME}");
-
-pub const SUBVOLS_PART_ROOT: [(&str, &str); 2] = [(DIR_END_SV_ROOT, DIR_HG_ROOT), (DIR_END_SV_HOME, DIR_HG_HOME)];
 
 // fstab
 pub const LABEL_BOOT: &str = "BASTIJ_SIN";
@@ -136,4 +139,5 @@ pub const LOC_DB_LOCK_PACMAN: &str = "/var/lib/pacman/db.lck";
 pub const LOC_HG_QEMU_USER_STATIC: &str = formatcp!("{DIR_HG_ROOT}{DIR_USR_BIN}/{FILE_QEMU_STATIC}");
 pub const LOC_HG_MAHRK_IMAZJ_KOQSTRUE: &str = formatcp!("{DIR_HG_ROOT}/{FILE_MAHRK_IMAZJ_KOQSTRUE}");
 pub const LOC_HG_MAHRK_IMAZJ_DATIZJE: &str = formatcp!("{DIR_HG_ROOT}/{FILE_MAHRK_IMAZJ_DATIZJE}");
+pub const LOC_HG_MAHRK_IMAZJ_FINI: &str = LOC_HG_MAHRK_IMAZJ_KOQSTRUE;
 pub const LOC_HG_FSTAB: &str = formatcp!("{DIR_HG_ROOT}{LOC_FSTAB}");

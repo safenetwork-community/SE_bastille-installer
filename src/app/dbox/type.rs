@@ -167,7 +167,7 @@ impl BoxInput {
     pub fn choice(text: String, default: &str, dbox: Option<Dialog>) -> (Choice, Option<String>) {
         match dbox {
             Some(ibox) => Input::new(text).default(default).show_with(ibox).expect(EXP_DBOX),
-            None => Input::new(text).default(default).show_with(Self::get_box_default()).expect(EXP_DBOX),
+            _ => Input::new(text).default(default).show_with(Self::get_box_default()).expect(EXP_DBOX),
         }
     }
 }
@@ -189,7 +189,7 @@ impl BoxPassword {
     pub fn choice(text: String, dbox: Option<Dialog>) -> (Choice, Option<String>) {
         match dbox {
             Some(pbox) => Password::new(text).show_with(pbox).expect(EXP_DBOX),
-            None => Password::new(text).show_with(Self::get_box_default()).expect(EXP_DBOX),
+            _ => Password::new(text).show_with(Self::get_box_default()).expect(EXP_DBOX),
         }
     }
 }
@@ -212,7 +212,7 @@ impl BoxQuestion {
     pub fn choice(text: String, dbox: Option<Dialog>) -> Choice {
         match dbox {
             Some(qbox) => Question::new(text).show_with(qbox).expect(EXP_DBOX),
-            None => Question::new(text).show_with(Self::get_box_default()).expect(EXP_DBOX),
+            _ => Question::new(text).show_with(Self::get_box_default()).expect(EXP_DBOX),
         }
     }
 }

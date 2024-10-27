@@ -15,6 +15,7 @@ use crate::app::dbox::text::*;
 use crate::app::dbox::r#type::*;
 
 use crate::shared::constants::dbox::*;
+use crate::shared::constants::install::TXT_USERS;
 use crate::shared::constants::string::EMPTY;
 
 use super::install::ListCommand;
@@ -727,59 +728,64 @@ pub struct BoxGaugeInstallation<'a> {
 
 impl HandlerGauge for BoxGaugeInstallation<'_> {
     fn handle(&mut self) -> Page {
-        let c_total = self.builder_list_command.len();
-        let mut c_start = 0;
-
-        for marker in self.builder_list_command.get_markers_progress() {
-            if marker.0.exists() {
-                while marker.1 != self.builder_list_command.get_method(c_start).0 {
-                    c_start += 1;
-                }
-                c_start += 1;
-                break;
-            } 
-        }
+        let commands_action = self.builder_list_command.get_commands();
+        let c_total = commands_action.len();
         
-        for c_done in c_start..c_total {
-            let percent: u8 = (c_done * 100 / c_total) as u8;            
-            let (text, command_opt) = self.builder_list_command.get_method(c_done);
+        let c_start = match self.builder_list_command.get_markers_progress().iter()
+            .find(|(file_marker, _)| file_marker.exists()) {
+            Some((_, text_marker)) => {
+                match commands_action.iter().position(|(text_progress, _)| text_progress == text_marker) {
+                    Some(p) => p+1,
+                    _ => 0,
+                }
+            }, 
+            _ => 0,
+        };
 
-            BoxGauge::show(text.as_str(), percent);
+        match commands_action[c_start..].iter().enumerate().find_map(|(i, (text, command_opt))| {
+            let percent = i * 100 / c_total;
+            BoxGauge::show(text.as_str(), percent as u8);
             sleep(Duration::from_millis(900));
-            
+
             match command_opt {
                 Some(command) => {
                     match command.stdout_capture().stderr_capture().unchecked().run() {
                         Ok(result_command) => {
-                            debug!("{}, display_command: {:?}", c_done, command);
+                            debug!("{}, display_command: {:?}", i, command);
                             match result_command.status.success() {
-                                true => continue,
+                                true => {},
                                 false => {
-                                    error!("{}, result_command: {:?}", c_done, result_command);
+                                    error!("{}, result_command: {:?}", i, result_command);
                                     *self.msg_error = format!("Error step: {}\nProcess returned an error:\n\n{:?}\n\nOutput stderr:\n\n{}", 
-                                        c_done, 
+                                        i, 
                                         command, 
                                         String::from_utf8(result_command.stderr).map_err(|non_utf8|
                                         String::from_utf8_lossy(non_utf8.as_bytes()).into_owned()).unwrap());
-                                    return Page::FailedCommand;
                                 },
                             }
                         },
-                        Err(e) => panic!("Failed to execute process {c_done}:\n\n{e}"),
+                        Err(e) => panic!("Failed to execute process {i}:\n\n{e}"),
                     }
                 },
-                None => {},
+                _ => {},
             }
 
-            match c_done {
-                19 => {
+            match text.as_str() {
+                TXT_USERS => {
                     debug!("home: {}", CommandOutput::chroot_ls("/home/folaht"));
                     debug!("ssh_key: {}", CommandOutput::chroot_cat("/home/folaht/.ssh/authorized_keys"));
                 },
                 _ => {}
             }
+
+            match self.msg_error.is_empty() {
+                true => None,
+                false => Some(Page::FailedCommand),
+            }  
+        }) {
+            Some(page) => page,
+            _ => Page::Finish,
         }
-        Page::Finish
     }
 }
 

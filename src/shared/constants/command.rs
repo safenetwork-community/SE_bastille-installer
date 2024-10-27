@@ -18,6 +18,7 @@ pub const TWO_GN_ONE: &str = "2>&1";
 // Shell arguments
 pub const ARG_C: &str = "-c";
 pub const EOA: &str = "--";
+pub const SC_SPACE: &str = "; ";
 
 // general sh -c arguments
 //pub const ASC_QUIET: &str = formatcp!("{ONE_G} {DEV_NULL} {TWO_GN_ONE}");
