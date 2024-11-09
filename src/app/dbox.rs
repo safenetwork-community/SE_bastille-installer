@@ -7,17 +7,20 @@ use std::time::Duration;
 use std::thread::sleep;
 
 use dialog::{backends::Dialog, Choice};
+use duct::Expression;
 use regex::RegexSet;
 
 use crate::app::commands::execute::CommandExecute;
-use crate::app::commands::output::*;
+use crate::app::commands::read::*;
 use crate::app::dbox::text::*;
 use crate::app::dbox::r#type::*;
 
 use crate::shared::constants::dbox::*;
+use crate::shared::constants::error::ErrorInstaller::{ErrorRunCommand, FailedRunCommand};
 use crate::shared::constants::install::TXT_USERS;
 use crate::shared::constants::string::EMPTY;
 
+use super::commands::run::TypeCommandRun;
 use super::install::ListCommand;
 
 pub struct BoxMenuMain<'a> {
@@ -105,7 +108,7 @@ impl HandlerBox for BoxMenuDrive<'_> {
 
     fn handle(&mut self) -> Page {
         match BoxMenu::choice(BoxTypeMenu::Default, self.get_text(), 
-            CommandOutput::drives()) {
+            CommandRead::drives()) {
             (Choice::Yes, Some(drive)) => {
                 *self.name_drive = drive;
                 self.next()
@@ -475,7 +478,7 @@ pub struct BoxMenuTimezoneRegion<'a> {
 impl HandlerBox for BoxMenuTimezoneRegion<'_> {
     fn handle(&mut self) -> Page {
         match BoxMenu::choice(BoxTypeMenu::Default, self.get_text(), 
-            CommandOutput::timeregion()) {
+            CommandRead::timeregion()) {
             (Choice::Yes, Some(region)) => {
                 *self.region = region.clone();
                 *self.path = Path::new(PATH_ZONEINFO).join(region);
@@ -516,7 +519,7 @@ pub struct BoxMenuTimezoneZone<'a>  {
 impl HandlerBox for BoxMenuTimezoneZone<'_>  {
     fn handle(&mut self) -> Page {
         match BoxMenu::choice(BoxTypeMenu::Default, self.get_text(), 
-            CommandOutput::timezone(self.path)) {
+            CommandRead::timezone(self.path)) {
             (Choice::Yes, Some(zone)) => {
                 *self.zone = zone;
                 self.next()
@@ -558,7 +561,7 @@ pub struct BoxMenuKeymapGuest<'a> {
 impl HandlerBox for BoxMenuKeymapGuest<'_> {
  fn handle(&mut self) -> Page {
     match BoxMenu::choice(BoxTypeMenu::Default, self.get_text(), 
-            CommandOutput::keymap()) {
+            CommandRead::keymap()) {
             (Choice::Yes, Some(map_key)) => {
                 *self.map_key = map_key.clone();
                 *self.path = Path::new(PATH_BKEYMAP).join(map_key);
@@ -599,7 +602,7 @@ pub struct BoxMenuKeyvarGuest<'a>  {
 impl HandlerBox for BoxMenuKeyvarGuest<'_>  {
     fn handle(&mut self) -> Page {
         match BoxMenu::choice(BoxTypeMenu::Default, self.get_text(), 
-            CommandOutput::keyvars(self.path)) {
+            CommandRead::keyvars(self.path)) {
             (Choice::Yes, Some(var_key)) => {
                 *self.var_key = var_key;
                 self.next()
@@ -721,71 +724,80 @@ impl HandlerBox for BoxQuestionConfig<'_> {
     }
 }
 
-pub struct BoxGaugeInstallation<'a> {
+pub struct BoxGaugeInstallation {
     pub builder_list_command: ListCommand,
-    pub msg_error: &'a mut String,
 }
 
-impl HandlerGauge for BoxGaugeInstallation<'_> {
+impl BoxGaugeInstallation {
+    fn handle_command(&self, command: Expression, i: usize, j: usize) {
+        match command.stdout_capture().stderr_capture().unchecked().run() {
+            Ok(result_command) => {
+                debug!("{}.{}, display_command: {:?}", i, j, command);
+                match result_command.status.success() {
+                    true => {},
+                    false => {
+                        error!("{}.{}, result_command: {:?}", i, j, result_command);
+                        /*
+                        *self.msg_error = format!("Error step: {}.{}\nProcess returned an error:\n\n{:?}\n\nOutput stderr:\n\n{}", 
+                            i,j,
+                            command, 
+                            String::from_utf8(result_command.stderr).map_err(|non_utf8|
+                            String::from_utf8_lossy(non_utf8.as_bytes()).into_owned()).unwrap());
+                        */
+                        panic!("{}", ErrorRunCommand(format!("Error step: {}.{}\nProcess returned an error:\n\n{:?}\n\nOutput stderr:\n\n{}", 
+                            i,j,
+                            command, 
+                            String::from_utf8(result_command.stderr).map_err(|non_utf8|
+                            String::from_utf8_lossy(non_utf8.as_bytes()).into_owned()).unwrap())
+                        ));
+                    },
+                }
+            },
+            Err(e) => panic!("{}", FailedRunCommand(format!("Step: {}.{}\n\n{:?}\n\n{}", i, j, command, e))),
+        }
+
+    }
+}
+
+impl HandlerGauge for BoxGaugeInstallation {
     fn handle(&mut self) -> Page {
-        let commands_action = self.builder_list_command.get_commands();
-        let c_total = commands_action.len();
         
-        let c_start = match self.builder_list_command.get_markers_progress().iter()
-            .find(|(file_marker, _)| file_marker.exists()) {
+        let dydeh_command = self.builder_list_command.get_dydeh_command();
+        let c_total = dydeh_command.len();
+        
+        let c_start = match self.builder_list_command.get_markers_progress()
+            .iter().find(|(file_marker, _)| file_marker.exists()) {
             Some((_, text_marker)) => {
-                match commands_action.iter().position(|(text_progress, _)| text_progress == text_marker) {
+                match dydeh_command.iter().position(|(text_progress, _)| text_progress == text_marker) {
                     Some(p) => p+1,
                     _ => 0,
                 }
             }, 
             _ => 0,
         };
-
-        match commands_action[c_start..].iter().enumerate().find_map(|(i, (text, command_opt))| {
+        
+        dydeh_command[c_start..].iter().enumerate().for_each(|(i, (text, deh_command))| {
             let percent = i * 100 / c_total;
             BoxGauge::show(text.as_str(), percent as u8);
-            sleep(Duration::from_millis(900));
+            sleep(Duration::from_millis(50));
 
-            match command_opt {
-                Some(command) => {
-                    match command.stdout_capture().stderr_capture().unchecked().run() {
-                        Ok(result_command) => {
-                            debug!("{}, display_command: {:?}", i, command);
-                            match result_command.status.success() {
-                                true => {},
-                                false => {
-                                    error!("{}, result_command: {:?}", i, result_command);
-                                    *self.msg_error = format!("Error step: {}\nProcess returned an error:\n\n{:?}\n\nOutput stderr:\n\n{}", 
-                                        i, 
-                                        command, 
-                                        String::from_utf8(result_command.stderr).map_err(|non_utf8|
-                                        String::from_utf8_lossy(non_utf8.as_bytes()).into_owned()).unwrap());
-                                },
-                            }
-                        },
-                        Err(e) => panic!("Failed to execute process {i}:\n\n{e}"),
-                    }
-                },
-                _ => {},
-            }
+            deh_command.iter().enumerate().for_each(|(j, command_opt)| {
+                match command_opt.prepare() {
+                    TypeCommandRun::Syl(command) => self.handle_command(command, i, j),
+                    TypeCommandRun::Opt(_) => unreachable!(),
+                    TypeCommandRun::Vec(_) => unreachable!(),
+                }
+            });
 
             match text.as_str() {
                 TXT_USERS => {
-                    debug!("home: {}", CommandOutput::chroot_ls("/home/folaht"));
-                    debug!("ssh_key: {}", CommandOutput::chroot_cat("/home/folaht/.ssh/authorized_keys"));
+                    debug!("home: {}", CommandRead::chroot_ls("/home/folaht"));
+                    debug!("ssh_key: {}", CommandRead::chroot_cat("/home/folaht/.ssh/authorized_keys"));
                 },
                 _ => {}
             }
-
-            match self.msg_error.is_empty() {
-                true => None,
-                false => Some(Page::FailedCommand),
-            }  
-        }) {
-            Some(page) => page,
-            _ => Page::Finish,
-        }
+        });
+        Page::Finish
     }
 }
 
@@ -823,7 +835,7 @@ pub struct BoxMenuKeymapHost<'a> {
 impl HandlerBox for BoxMenuKeymapHost<'_> {
     fn handle(&mut self) -> Page {
         match BoxMenu::choice(BoxTypeMenu::Default, self.get_text(), 
-            CommandOutput::keymap()) {
+            CommandRead::keymap()) {
             (Choice::Yes, Some(keymap)) => {
                 *self.map_key = keymap.clone();
                 *self.path = Path::new(PATH_BKEYMAP).join(keymap);
@@ -849,7 +861,7 @@ pub struct BoxMenuKeyvarHost<'a>  {
 impl HandlerBox for BoxMenuKeyvarHost<'_>  {
     fn handle(&mut self) -> Page {
         match BoxMenu::choice(BoxTypeMenu::Default, self.get_text(), 
-            CommandOutput::keyvars(self.path)) {
+            CommandRead::keyvars(self.path)) {
             (Choice::Yes, Some(var_key)) => {
                 *self.var_key = var_key.clone();
                 CommandExecute::setup_keymap(self.map_key, &var_key);

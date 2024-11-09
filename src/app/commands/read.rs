@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::str; 
 
 use const_format::formatcp;
@@ -24,19 +24,18 @@ pub const PATH_ZONEINFO: &str = "/usr/share/zoneinfo";
 
 // Scols-filter arguments
 const ARG_FILTER_MOUNTED_VOL_MAIN: &str = "MOUNTPOINT =~ \"..*\"";
-const ARG_FILTER_MOUNTED_VOLS: &str = "MOUNTPOINTS =~ \"..*\"";
+// const ARG_FILTER_MOUNTED_VOLS: &str = "MOUNTPOINTS =~ \"..*\"";
 const ARG_FILTER_PTS_ONLY_1: &str = "NAME =~ \"";
 const ARG_FILTER_PTS_ONLY_2: &str = "[0-9]*\"";
 
 // Arguments
-const ARG_COL_MOUNTPOINTS: &str = "-no mountpoints -lp";
+// const ARG_COL_MOUNTPOINTS: &str = "-no mountpoints -lp";
 const ARG_COL_NAME_MOUNTPOINT: &str = "-no name,mountpoint -lp";
 const ARG_MOUNTED_VOL_MAIN_1: &str = formatcp!("{ARG_COL_NAME_MOUNTPOINT} --filter '{ARG_FILTER_PTS_ONLY_1}");
 const ARG_MOUNTED_VOL_MAIN_2: &str = formatcp!("{ARG_FILTER_PTS_ONLY_2} && {ARG_FILTER_MOUNTED_VOL_MAIN}'");
-const ARG_MOUNTED_VOLS_DEV_1: &str = formatcp!("{ARG_COL_MOUNTPOINTS} --filter '{ARG_FILTER_PTS_ONLY_1}");
-const ARG_MOUNTED_VOLS_DEV_2: &str = formatcp!("{ARG_FILTER_PTS_ONLY_2} && {ARG_FILTER_MOUNTED_VOLS}'");
+// const ARG_MOUNTED_VOLS_DEV_1: &str = formatcp!("{ARG_COL_MOUNTPOINTS} --filter '{ARG_FILTER_PTS_ONLY_1}");
+// const ARG_MOUNTED_VOLS_DEV_2: &str = formatcp!("{ARG_FILTER_PTS_ONLY_2} && {ARG_FILTER_MOUNTED_VOLS}'");
 const ARG_LIST_DRIVES: &str = "-dn -o NAME";
-const ARG_PRINT_S1: &str = "{print $1}";
 
 // General programs
 const SED: &str = "sed";
@@ -71,9 +70,9 @@ pub const LIST_MENU_CONFIG: &[(&str, Page)] = &[
     ("enter hostname", Page::InputHostname)
 ];
 
-pub struct CommandOutput {}
+pub struct CommandRead {}
 
-impl CommandOutput {
+impl CommandRead {
 
     pub fn chroot_cat(args: &str) -> String {
         let command_sh = format!("\
@@ -135,39 +134,6 @@ impl CommandOutput {
                     1 => true,
                     integer => panic!("{ERR_FAILED_EXECUTE}: {SUDO} {command_sh}\n{ERR_OUT_OF_BOUNDS}: Max results: 1, Found {}\n{}", integer, s),
                 }
-            },
-        }
-    }
-
-    pub fn mounted_volumes_device(path_drive: &Path) -> Vec<PathBuf> {
-        let command_sh = format!(r#"{LSBLK} {ARG_MOUNTED_VOLS_DEV_1}{}{ARG_MOUNTED_VOLS_DEV_2}"#, path_drive.display());
-
-        match cmd!(SUDO, EOA, SH, ARG_C, command_sh.clone()).read() {
-            Err(e) => {
-                match e.to_string().ends_with("exited with code 32") {
-                    true => vec![], 
-                    false => panic!("{ERR_FAILED_EXECUTE}: {SUDO} {command_sh}\n{e}"),
-                }
-            }
-            Ok(s) => {
-                s.lines().map(|e| { 
-                PathBuf::from(e.trim())
-                }).collect()
-            },
-        }
-    }
-
-    pub fn partition_numbers(drive: &Path) -> Vec<u32> {
-        let command_sh = format!("{PARTED} {} print", drive.display());
-
-        match cmd!(SUDO, EOA, SH, ARG_C, command_sh.clone())
-            .pipe(cmd!(AWK, ARG_PRINT_S1)).read() { 
-            Err(e) => panic!("{ERR_FAILED_EXECUTE}: {SUDO} {command_sh} | {AWK} {ARG_PRINT_S1}\n{e}"),
-            Ok(s) => {
-                s.lines().filter_map(|e| match e.trim().parse::<u32>() {
-                    Ok(n) => Some(n),
-                    _ => None
-                }).collect()
             },
         }
     }

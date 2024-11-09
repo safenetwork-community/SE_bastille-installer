@@ -1,8 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use duct::Expression;
-
-use crate::app::commands::action::CommandAction;
+use crate::app::commands::run::*;
 
 use crate::shared::constants::install::*;
 
@@ -58,47 +56,81 @@ impl ListCommand {
         }
     }
     
-    pub fn get_commands(&self) -> Vec<(String, Option<Expression>)> {
+    pub fn get_dydeh_command(&self) -> Vec<(String, Vec<Box<dyn CommandRun>>)> {
         match self.device.as_str() {
             "test" =>  vec![
-                (String::from(TXT_UMOUNT_SD_CARD), CommandAction::umount_drive(&self.drive)),
-                (String::from(TXT_RM_PARTITIONS), CommandAction::remove_partitions_drive(&self.drive)),
-                (String::from(TXT_DD_FIRST_MBS), CommandAction::dd_first_mbs(&self.drive)),
-                (String::from(TXT_MKLABEL), CommandAction::make_label(&self.drive)),
-                (String::from(TXT_MKBOOT), CommandAction::make_boot_partition(&self.drive, TYPE_FS_FAT32)),
-                (String::from(TXT_MKROOT), CommandAction::make_root_partition(&self.drive, TYPE_FS_BTRFS)), 
-                (String::from(TXT_PARTPROBE), CommandAction::partprobe(&self.drive)),
-                (String::from(TXT_MKVFAT), CommandAction::mkfs_vfat(&self.drive, PART_BOOT)),
-                (String::from(TXT_MKBTRFS), CommandAction::mkfs_btrfs(&self.drive, PART_ROOT)),
-                (String::from(TXT_MNT_MAINVOL_ROOT), CommandAction::mount_drive(
-                    &[(ROOT, &self.partition_root, Path::new(DIR_HG_ROOT)), 
-                    (BOOT, &self.partition_boot, Path::new(DIR_HG_BOOT))],
-                    &[(DIR_END_SV_ROOT, Path::new(DIR_SV_ROOT)),    
-                    (DIR_END_SV_HOME, Path::new(DIR_HG_HOME))])),
-                (String::from(TXT_UMOUNT_ROOT), CommandAction::umount_volume(&self.partition_root)),
-                (String::from(TXT_MNT_SUBVOLS), CommandAction::mount_drive_part_two(
-                    &self.partition_root, &[
-                    (Path::new(DIR_HG_ROOT), DIR_END_SV_ROOT), 
-                    (Path::new(DIR_HG_HOME), DIR_END_SV_HOME)
-                ],
-                (&self.partition_boot, Path::new(DIR_HG_BOOT)))),
-                (String::from(TXT_DOWNLOAD_OS), CommandAction::wget(DIR_MNT, format!("{URL_ARMTIX_DL}{FILE_XZ_ARMTIX}").as_str())),
-                (String::from(TXT_EXTRACTING_OS), CommandAction::extract_rootfs(format!("{DIR_MNT}/{FILE_XZ_ARMTIX}").as_str(), PathBuf::from(DIR_HG_ROOT))),
-                (String::from(TXT_BR_ARCH_GAP), CommandAction::bridge_arch_gap()),
-                (String::from(TXT_PACKAGES_UPDATE), CommandAction::update_packages()),
-                (String::from(TXT_USERS), CommandAction::set_users(&self.name_user, &self.name_full, &self.password_user, &self.password_root, &self.key_pub)),
-                (String::from(TXT_FSTAB), CommandAction::zjenx_fstab()),
-                // 23 => (String::from(TXT_INSTALL_BOOTLOADER), CommandAction::eqstalx_bootloader(BL_UEFI, &self.drive, PART_BOOT)),
-                // 22 => (String::from(TXT_MOVE_BOOT), CommandAction::move_boot()),
-                (String::from(TXT_PACKAGES_INSTALL), CommandAction::eqstalx_packages(DEFAULT_PACKAGES)),
-                (String::from(TXT_PACKAGE_FS), CommandAction::eqstalx_fs()),
-                (String::from(TXT_REZOSUR), CommandAction::azjx_rezosur()),
-                (String::from(TXT_EDITOR), CommandAction::azjx_editor()),
-                (String::from(TXT_SETTINGS_SYSTEM), CommandAction::set_settings_system(&self.region_timezone, &self.zone_timezone, &self.locale, &self.keymap, &self.name_host)),
-                (String::from(TXT_CLEAN_INSTALL), CommandAction::clean_up_install(DEFAULT_INIT)),
-                (String::from(TXT_UMOUNT_DIRS), CommandAction::umount_dirs(&[DIR_HG_BOOT, DIR_HG_HOME, DIR_HG_ROOT])),
-                (String::from(TXT_PARTPROBE), CommandAction::partprobe(&self.drive)),
-                ],
+                (String::from(TXT_RM_PARTITIONS), vec![ 
+                    Box::new(UmountDrive::new(&self.drive)), 
+                    Box::new(RemovePartitionsDrive::new(&self.drive))
+                ]),
+                (String::from(TXT_DD_FIRST_MBS), vec![
+                    Box::new(DdFirstMbs::new(&self.drive))
+                ]),
+                (String::from(TXT_CREATE_VOLS_MAIN), vec![
+                    Box::new(MakeLabel::new(&self.drive)),
+                    Box::new(MakePartitionBoot::new(&self.drive, TYPE_FS_FAT32)),
+                    Box::new(MakePartitionRoot::new(&self.drive, TYPE_FS_BTRFS)), 
+                    Box::new(Partprobe::new(&self.drive)),
+                    Box::new(MkfsVfat::new(&self.drive, PART_BOOT)),
+                    Box::new(MkfsBtrfs::new(&self.drive, PART_ROOT))
+                ]),
+                (String::from(TXT_CREATE_VOLS_SUB), vec![
+                    Box::new(MountVolumeMain::new(&self.partition_root, Path::new(DIR_HG_ROOT))),
+                    Box::new(MkfsBtrfsSub::new(Path::new(DIR_SV_ROOT))),
+                    Box::new(MkfsBtrfsSub::new(Path::new(DIR_SV_HOME))),
+                    Box::new(UmountVolume::new(&self.partition_root)),
+                    Box::new(MountVolumeSub::new(DIR_NAME_SV_ROOT, &self.partition_root, Path::new(DIR_HG_ROOT))),
+                    Box::new(MakeDir::new(Path::new(DIR_HG_HOME))),
+                    Box::new(MountVolumeSub::new(DIR_NAME_SV_HOME, &self.partition_root, Path::new(DIR_HG_HOME))),
+                    Box::new(MakeDir::new(Path::new(DIR_HG_BOOT))),
+                    Box::new(Mount::new(&self.partition_boot, Path::new(DIR_HG_BOOT))),
+                ]),
+                (String::from(TXT_DOWNLOAD_OS), vec![
+                    Box::new(Wget::new(URL_ARMTIX_DL, Path::new(LOC_FILE_XZ_ARMTIX)))
+                ]),
+                (String::from(TXT_EXTRACTING_OS), vec![
+                    Box::new(TarExtract::new(Path::new(LOC_FILE_XZ_ARMTIX), Path::new(DIR_HG_ROOT))),
+                    Box::new(Touch::new(Path::new(LOC_HG_MAHRK_IMAZJ_KOQSTRUE))),
+                ]),
+                (String::from(TXT_PACKAGES_UPDATE), vec![ 
+                    Box::new(BridgeArchGap {}),
+                    Box::new(PacmanUpdate {}),
+                    Box::new(Remove::new(Path::new(LOC_HG_MAHRK_IMAZJ_KOQSTRUE))),
+                    Box::new(Touch::new(Path::new(LOC_HG_MAHRK_IMAZJ_DATIZJE))),
+                ]),
+                (String::from(TXT_USERS), vec![ 
+                    Box::new(ChrootGroupmod::new(DEFAULT_USERGROUP_USER, &self.name_user)),
+                    Box::new(SetUsers::new(&self.name_user, &self.name_full, &self.password_user, &self.password_root, &self.key_pub))
+                ]),
+                (String::from(TXT_FSTAB), vec![
+                    Box::new(ZjenxFstab {})
+                ]),
+                (String::from(TXT_PACKAGES_INSTALL), vec![ 
+                    Box::new(EqstalxPackages::new(DEFAULT_PACKAGES))
+                ]),
+                (String::from(TXT_PACKAGE_FS), vec![ 
+                    Box::new(EqstalxFs {})
+                ]),
+                (String::from(TXT_REZOSUR), vec![
+                    Box::new(AzjxRezosur {})
+                ]),
+                (String::from(TXT_EDITOR), vec![
+                    Box::new(AzjxEditor {})
+                ]),
+                (String::from(TXT_SETTINGS_SYSTEM), vec![
+                    Box::new(SetSettingsSystem::new(&self.region_timezone, &self.zone_timezone, &self.locale, &self.keymap, &self.name_host))
+                ]),
+                (String::from(TXT_CLEAN_INSTALL), vec![
+                    Box::new(Umount::new(Path::new(&format!("{DIR_MNT}/root/var/cache/pacman/pkg")))),
+                    Box::new(CleanupInstall::new(DEFAULT_INIT))
+                ]),
+                (String::from(TXT_UMOUNT_DIRS), vec![
+                    Box::new(UmountDirs::new(&[DIR_HG_BOOT, DIR_HG_HOME, DIR_HG_ROOT]))
+                ]),
+                (String::from(TXT_PARTPROBE), vec![
+                    Box::new(Partprobe::new(&self.drive))
+                ]),
+            ],
             _ => panic!("Device type not found in list: {}", &self.device),
         }
     }

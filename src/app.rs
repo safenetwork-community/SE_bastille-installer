@@ -198,7 +198,7 @@ impl App {
 
         BoxGaugeInstallation {
             builder_list_command: self.get_builder_list_command(),
-            msg_error: &mut self.msg_error,
+            // msg_error: &mut self.msg_error,
         }
     }
 
@@ -218,7 +218,7 @@ impl App {
 
         BoxGaugeInstallation {
             builder_list_command: self.get_builder_list_command(),
-            msg_error: &mut self.msg_error,
+            // msg_error: &mut self.msg_error,
         }
     }
 
@@ -289,7 +289,7 @@ impl App {
         match page {
             Page::EmptyMenu => Err(anyhow!(ErrorInstaller::EmptyMenu())),
             Page::NotFoundBox => Err(anyhow!(ErrorInstaller::NotFoundBox())),
-            Page::FailedCommand => Err(anyhow!(ErrorInstaller::FailedCommand(msg_error))),
+            // Page::FailedCommand => Err(anyhow!(ErrorInstaller::FailedRunCommand(msg_error))),
             Page::Escape => Ok(println!("==> {}", MSG_EXIT_ESCAPE)),
             Page::Quit => Ok(println!("==> {}", MSG_EXIT_QUIT)),
             _ => Err(anyhow!(ErrorInstaller::Unknown(msg_error)))

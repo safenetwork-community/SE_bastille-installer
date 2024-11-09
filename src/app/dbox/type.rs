@@ -61,7 +61,7 @@ pub enum Page {
     EmptyHostname, EmptyFullname,
     EmptyMenu, EmptyPasswordRoot, 
     EmptyPasswordUser, EmptyUsername,
-    ErrorUnknown, Escape, FailedCommand, 
+    ErrorUnknown, Escape, 
     Finish, InputFullname, InputHostname,
     InputUsergroups, InputUsername,
     InvalidHostname, InvalidUsername,

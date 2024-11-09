@@ -36,26 +36,13 @@ pub const PRIMARY: &str = "primary";
 pub const TXT_PARTPROBE: &str = concatcp!("Partprobe", DOTS);
 
 // prepare texts
+pub const TXT_CREATE_VOLS_MAIN: &str = concatcp!("Create volumes", DOTS);
+pub const TXT_CREATE_VOLS_SUB: &str = concatcp!("Create subvolumes", DOTS);
 pub const TXT_DD_FIRST_MBS: &str = concatcp!("Clearing first 32mb of drive", DOTS);
-pub const TXT_MKLABEL: &str = concatcp!("Make label", DOTS);
-pub const TXT_MKBOOT: &str = concatcp!("Make boot partition", DOTS);
-pub const TXT_MKROOT: &str = concatcp!("Make root partition", DOTS);
-pub const TXT_MKVFAT: &str = concatcp!("Make vfat", DOTS);
-pub const TXT_MKBTRFS: &str = concatcp!("Make btrfs", DOTS);
-pub const TXT_MKDIR_MNTS: &str = concatcp!("Create mount dirs", DOTS);
-// pub const TXT_MKSUBVOL_HOME: &str = concatcp!("Create subvolume home", DOTS);
-// pub const TXT_MKSUBVOL_ROOT: &str = concatcp!("Create subvolume root", DOTS);
-// pub const TXT_MNT_BOOT: &str = concatcp!("Mount boot", DOTS);
-pub const TXT_MNT_MAINVOL_ROOT: &str = concatcp!("Mount root for subvolumes", DOTS);
-pub const TXT_MNT_SUBVOLS: &str = concatcp!("Mount subvolumes", DOTS);
-// pub const TXT_MOVE_BOOT: &str = concatcp!("Move extracted boot files to boot partition", DOTS);
 pub const TXT_RM_PARTITIONS: &str = concatcp!("Prepare drive partitions", DOTS);
-pub const TXT_UMOUNT_ROOT: &str = concatcp!("Unmount root", DOTS);
-pub const TXT_UMOUNT_SD_CARD: &str = concatcp!("Unmount partitions SD card", DOTS);
 
 
 // install os texts
-pub const TXT_BR_ARCH_GAP: &str = concatcp!("Bridge archticture gap", DOTS);
 pub const TXT_DOWNLOAD_OS: &str = formatcp!("Downloading latest version of {DEFAULT_OS_BASE}{}", DOTS); 
 pub const TXT_EXTRACTING_OS: &str = formatcp!("Extracting {DEFAULT_OS_BASE}{}", DOTS);
 
@@ -106,11 +93,11 @@ pub const DIR_HG_ROOT: &str = formatcp!("{DIR_MNT}/{ROOT}");
 pub const DIR_HG_HOME: &str = formatcp!("{DIR_HG_ROOT}/{HOME}");
 
 // subvolume dirs
-pub const DIR_END_SV_ROOT: &str ="@";
-pub const DIR_END_SV_HOME: &str = "@home";
+pub const DIR_NAME_SV_ROOT: &str ="@";
+pub const DIR_NAME_SV_HOME: &str = "@home";
 
-pub const DIR_SV_ROOT: &str = formatcp!("{DIR_HG_ROOT}/{DIR_END_SV_ROOT}");
-pub const DIR_SV_HOME: &str = formatcp!("{DIR_HG_ROOT}/{DIR_END_SV_HOME}");
+pub const DIR_SV_ROOT: &str = formatcp!("{DIR_HG_ROOT}/{DIR_NAME_SV_ROOT}");
+pub const DIR_SV_HOME: &str = formatcp!("{DIR_HG_ROOT}/{DIR_NAME_SV_HOME}");
 
 // fstab
 pub const LABEL_BOOT: &str = "BASTIJ_SIN";
@@ -141,3 +128,4 @@ pub const LOC_HG_MAHRK_IMAZJ_KOQSTRUE: &str = formatcp!("{DIR_HG_ROOT}/{FILE_MAH
 pub const LOC_HG_MAHRK_IMAZJ_DATIZJE: &str = formatcp!("{DIR_HG_ROOT}/{FILE_MAHRK_IMAZJ_DATIZJE}");
 pub const LOC_HG_MAHRK_IMAZJ_FINI: &str = LOC_HG_MAHRK_IMAZJ_KOQSTRUE;
 pub const LOC_HG_FSTAB: &str = formatcp!("{DIR_HG_ROOT}{LOC_FSTAB}");
+pub const LOC_FILE_XZ_ARMTIX: &str = formatcp!("{DIR_MNT}/{FILE_XZ_ARMTIX}");
