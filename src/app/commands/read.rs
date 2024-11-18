@@ -7,7 +7,6 @@ use duct::cmd;
 use crate::app::dbox::r#type::Page;
 use crate::shared::constants::command::*;
 use crate::shared::constants::string::EMPTY;
-use crate::shared::constants::install::DIR_HG_ROOT;
 
 // find regex
 pub const REGEX_FIND_DIRS_ALL: &str = r". -regex \.\/[^\.].* -prune -type d";
@@ -73,28 +72,6 @@ pub const LIST_MENU_CONFIG: &[(&str, Page)] = &[
 pub struct CommandRead {}
 
 impl CommandRead {
-
-    pub fn chroot_cat(args: &str) -> String {
-        let command_sh = format!("\
-            {ARTIX_CHROOT} {DIR_HG_ROOT} test -f {args} && \
-            {ARTIX_CHROOT} {DIR_HG_ROOT} cat {args}");
-
-        match cmd!(SUDO, EOA, SH, ARG_C, command_sh.clone()).read() {
-            Err(e) => panic!("{ERR_FAILED_EXECUTE}: {command_sh}\n{e}"),
-            Ok(s) => s,
-        }
-    }
-
-    pub fn chroot_ls(args: &str) -> String {
-        let command_sh = format!("\
-            {ARTIX_CHROOT} {DIR_HG_ROOT} test -d {args} && \
-            {ARTIX_CHROOT} {DIR_HG_ROOT} ls {args}");
-
-        match cmd!(SUDO, EOA, SH, ARG_C, command_sh.clone()).read() {
-            Ok(s) => s,
-            Err(e) => panic!("{ERR_FAILED_EXECUTE}: {command_sh}\n{e}"),
-        }
-    }
 
     pub fn drives() -> Vec<[String; 2]> {
         

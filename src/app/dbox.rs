@@ -10,18 +10,17 @@ use dialog::{backends::Dialog, Choice};
 use duct::Expression;
 use regex::RegexSet;
 
-use crate::app::commands::execute::CommandExecute;
-use crate::app::commands::read::*;
-use crate::app::dbox::text::*;
-use crate::app::dbox::r#type::*;
+use super::commands::execute::CommandExecute;
+use super::commands::read::*;
+use super::commands::run::TypeCommandRun;
+use super::dbox::text::*;
+use super::dbox::r#type::*;
+use super::install::ListCommand;
 
 use crate::shared::constants::dbox::*;
 use crate::shared::constants::error::ErrorInstaller::{ErrorRunCommand, FailedRunCommand};
-use crate::shared::constants::install::TXT_USERS;
 use crate::shared::constants::string::EMPTY;
 
-use super::commands::run::TypeCommandRun;
-use super::install::ListCommand;
 
 pub struct BoxMenuMain<'a> {
     pub msg_error: &'a mut String,
@@ -737,13 +736,6 @@ impl BoxGaugeInstallation {
                     true => {},
                     false => {
                         error!("{}.{}, result_command: {:?}", i, j, result_command);
-                        /*
-                        *self.msg_error = format!("Error step: {}.{}\nProcess returned an error:\n\n{:?}\n\nOutput stderr:\n\n{}", 
-                            i,j,
-                            command, 
-                            String::from_utf8(result_command.stderr).map_err(|non_utf8|
-                            String::from_utf8_lossy(non_utf8.as_bytes()).into_owned()).unwrap());
-                        */
                         panic!("{}", ErrorRunCommand(format!("Error step: {}.{}\nProcess returned an error:\n\n{:?}\n\nOutput stderr:\n\n{}", 
                             i,j,
                             command, 
@@ -784,19 +776,14 @@ impl HandlerGauge for BoxGaugeInstallation {
             deh_command.iter().enumerate().for_each(|(j, command_opt)| {
                 match command_opt.prepare() {
                     TypeCommandRun::Syl(command) => self.handle_command(command, i, j),
-                    TypeCommandRun::Opt(_) => unreachable!(),
-                    TypeCommandRun::Vec(_) => unreachable!(),
+                    TypeCommandRun::Deh(commands) => commands.iter().for_each(|command| {
+                        self.handle_command(command.into(), i, j);
+                    }),
+                    TypeCommandRun::Kuq() => {},
                 }
             });
-
-            match text.as_str() {
-                TXT_USERS => {
-                    debug!("home: {}", CommandRead::chroot_ls("/home/folaht"));
-                    debug!("ssh_key: {}", CommandRead::chroot_cat("/home/folaht/.ssh/authorized_keys"));
-                },
-                _ => {}
-            }
         });
+
         Page::Finish
     }
 }

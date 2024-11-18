@@ -1,6 +1,6 @@
 mod dbox;
-mod commands;
-mod install;
+pub mod commands;
+pub mod install;
 
 use anyhow::{anyhow, Error, Result};
 use std::path::{Path, PathBuf};

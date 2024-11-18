@@ -2,6 +2,7 @@
 
 mod app;
 mod shared;
+mod tests;
 
 use std::{default::Default, env};
 

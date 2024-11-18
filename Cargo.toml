@@ -1,5 +1,5 @@
 [package]
-name = "se_bastille-installer"
+name = "se_bastille_installer"
 version = "0.1.0"
 edition = "2021"
 authors = ["Folât Pjêrsômêj"]
