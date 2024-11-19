@@ -229,13 +229,33 @@ impl CommandRun for EqstalxPackage {
     }
 }
 
-pub struct EqstalxEditor {}
-impl EqstalxEditor {}
+pub struct EqstalxPackageAUR {
+    packages: Vec<String>
+}
 
-impl CommandRun for EqstalxEditor {
-    fn prepare(&self) -> TypeCommandRun {
-        TypeCommandRun::Syl(cmd!(ARTIX_CHROOT, DIR_HG_ROOT, BASH, ACS_LUNARVIM, ARG_Y)
-            .env(ENV_LV_BRANCH_KEY, ENV_LV_BRANCH_VALUE))
+impl EqstalxPackageAUR {
+    #[allow(dead_code)]
+    pub fn syl(package: &str) -> EqstalxPackage {
+        EqstalxPackage {
+            packages: vec![package.into()] 
+        } 
+    }
+
+    pub fn deh(packages: &[&str]) -> EqstalxPackage {
+        EqstalxPackage {
+            packages: packages.iter().map(|package| String::from(*package)).collect()
+        }
+    }
+}
+
+impl CommandRun for EqstalxPackageAUR {
+    fn prepare(&self) -> TypeCommandRun { 
+        let mut deh_cmd = vec![];
+        
+        self.packages.iter().for_each(|e| {
+            deh_cmd.push(cmd!(ARTIX_CHROOT, DIR_HG_ROOT, SUDO, ARG_U, TRIZEN, ARGS_S, ARL_NOCONFIRM, e));
+        });
+        TypeCommandRun::Deh(deh_cmd)
     }
 }
 
@@ -427,6 +447,21 @@ impl CommandRun for Mount {
     }
 }
 
+pub struct MountDevPts {}
+
+impl MountDevPts {
+    pub fn new() -> MountDevPts {
+        MountDevPts {}
+    }
+}
+
+impl CommandRun for MountDevPts {
+    fn prepare(&self) -> TypeCommandRun {
+        TypeCommandRun::Syl(cmd!(SUDO, MOUNT, ARG_T, "devpts", "none", format!("{DIR_HG_ROOT}/dev/pts")))
+    }
+}
+
+
 pub struct MountVolumeMain {
     pub filesystem: PathBuf,
     pub mountpoint: PathBuf,
@@ -512,11 +547,7 @@ impl Remove {
 
     pub fn chroot(path: &Path) -> Remove {
         Remove {
-            path: {
-                let mut p = PathBuf::from(DIR_HG_ROOT);
-                p.push(path);
-                p
-            }
+            path: Path::new(DIR_HG_ROOT).join(path)
         }
     }
 }
@@ -622,9 +653,17 @@ pub struct Touch {
 }
 
 impl Touch {
+
+    #[allow(dead_code)]
     pub fn new(path: &Path) -> Touch {
         Touch {
             path: path.into()
+        }
+    }
+
+    pub fn chroot(path: &Path) -> Touch {
+        Touch {
+            path: Path::new(DIR_HG_ROOT).join(path)
         }
     }
 }
@@ -665,10 +704,10 @@ impl CommandRun for Umount {
 
         match paths.len() {
             0 => TypeCommandRun::Kuq(),
-            1 => TypeCommandRun::Syl(cmd!(SUDO, UMOUNT, paths[0])),
+            1 => TypeCommandRun::Syl(cmd!(SUDO, UMOUNT, ARG_L, paths[0])),
             _ => {
                 TypeCommandRun::Deh(paths.iter().map(|e| {
-                    cmd!(SUDO, UMOUNT, e)
+                    cmd!(SUDO, UMOUNT, ARG_L, e)
                 }).collect())
             }
         }
@@ -740,20 +779,3 @@ impl CommandRun for ZjenxFstab {
         TypeCommandRun::Syl(cmd!(SUDO, FSTABGEN, ARGS_U, DIR_HG_ROOT).pipe(cmd!(SUDO, TEE, LOC_HG_FSTAB)))
     }
 }
-
-
-
-
-
-    /*
-#[derive(Clone, Copy)]
-pub struct CommandAction {}
-    
-impl CommandAction {
-
-
-    pub fn pacman_update() -> Vec<Expression> {
-        vec![cmd!(SUDO, ARTIX_CHROOT, DIR_HG_ROOT, PACMAN, ARGS_SYYU, ARL_NOCONFIRM)]
-    }
-}
-*/

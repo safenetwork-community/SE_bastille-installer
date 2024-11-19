@@ -53,7 +53,7 @@ impl ListCommand {
                 (Path::new(LOC_MAHRK_IMAZJ_DATIZJE), TXT_PACKAGES_UPDATE),
                 (Path::new(LOC_MAHRK_PAKEHT_PACMAN_EQSTALE), TXT_PACKAGES_INSTALL),
                 (Path::new(LOC_MAHRK_PAKEHT_FS_EQSTALE), TXT_PACKAGE_FS),
-                (Path::new(LOC_MAHRK_EDITOR_EQSTALE), TXT_PACKAGES_AUR)
+                (Path::new(LOC_MAHRK_PAKEHT_AUR_EQSTALE), TXT_PACKAGES_AUR)
             ],
             _ => panic!("Device type not found in list: {}", &self.device),
         }
@@ -93,10 +93,10 @@ impl ListCommand {
                 ]),
                 (String::from(TXT_EXTRACTING_OS), vec![
                     Box::new(TarExtract::new(Path::new(LOC_FILE_XZ_ARMTIX), Path::new(DIR_HG_ROOT))),
-                    Box::new(Touch::new(Path::new(LOC_MAHRK_IMAZJ_KOQSTRUE))),
+                    Box::new(BridgeArchGap {}),
+                    Box::new(Touch::chroot(Path::new(LOC_MAHRK_IMAZJ_KOQSTRUE))),
                 ]),
                 (String::from(TXT_USERS), vec![ 
-                    Box::new(BridgeArchGap {}),
                     Box::new(ChrootGroupmod::new(DEFAULT_USERGROUP_USER, &self.name_user)),
                     Box::new(ChrootUsermod::new(DEFAULT_USERNAME, &self.name_user, &self.name_full, 
                         &self.password_user, &self.password_root, &self.key_pub))
@@ -104,7 +104,7 @@ impl ListCommand {
                 (String::from(TXT_PACKAGES_UPDATE), vec![ 
                     Box::new(PacmanUpdate {}),
                     Box::new(Remove::chroot(Path::new(LOC_MAHRK_IMAZJ_KOQSTRUE))),
-                    Box::new(Touch::new(Path::new(LOC_MAHRK_IMAZJ_DATIZJE))),
+                    Box::new(Touch::chroot(Path::new(LOC_MAHRK_IMAZJ_DATIZJE))),
                 ]),
                 (String::from(TXT_FSTAB), vec![
                     Box::new(ZjenxFstab {})
@@ -112,19 +112,20 @@ impl ListCommand {
                 (String::from(TXT_PACKAGES_INSTALL), vec![ 
                     Box::new(EqstalxPackage::deh(DEFAULT_PACKAGES)),
                     Box::new(Remove::chroot(Path::new(LOC_MAHRK_IMAZJ_DATIZJE))),
-                    Box::new(Touch::new(Path::new(LOC_MAHRK_PAKEHT_PACMAN_EQSTALE)))
+                    Box::new(Touch::chroot(Path::new(LOC_MAHRK_PAKEHT_PACMAN_EQSTALE)))
                 ]),
                 (String::from(TXT_PACKAGE_FS), vec![ 
                     Box::new(Remove::chroot(Path::new(LOC_MKINITCPIO_STS))),
                     Box::new(EqstalxPackage::syl(DEFAULT_PACKAGE_FS)),
                     Box::new(Remove::chroot(Path::new(LOC_MAHRK_PAKEHT_PACMAN_EQSTALE))),
-                    Box::new(Touch::new(Path::new(LOC_MAHRK_PAKEHT_FS_EQSTALE)))
+                    Box::new(Touch::chroot(Path::new(LOC_MAHRK_PAKEHT_FS_EQSTALE)))
                 ]),
                 (String::from(TXT_EDITOR), vec![ 
                     Box::new(Git::config("init.defaultBranch", "main")),
-                    Box::new(EqstalxEditor {}),
+                    Box::new(MountDevPts::new()),
+                    Box::new(EqstalxPackageAUR::deh(DEFAULT_PACKAGES_AUR)),
                     Box::new(Remove::chroot(Path::new(LOC_MAHRK_PAKEHT_FS_EQSTALE))),
-                    Box::new(Touch::new(Path::new(LOC_MAHRK_EDITOR_EQSTALE)))
+                    Box::new(Touch::chroot(Path::new(LOC_MAHRK_PAKEHT_AUR_EQSTALE)))
                 ]),
                 (String::from(TXT_REZOSUR), vec![
                     Box::new(AzjxRezosur {})
