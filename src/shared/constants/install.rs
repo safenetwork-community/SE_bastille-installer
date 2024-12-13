@@ -8,15 +8,16 @@ pub const DOTS: &str = "..";
 pub const DEFAULT_CONSOLEFONT: &str = "eurlatingr";
 pub const DEFAULT_EDITOR: &str = "lunarvim";
 pub const DEFAULT_INIT: &str = "dinit";
-pub const DEFAULT_PACKAGES_AUR: &[&str; 1] = &["lunarvim-git"]; 
 pub const DEFAULT_PACKAGE_FS: &str = "btrfs-progs"; 
 pub const DEFAULT_PACKAGES: &[&str; 5] = &["cargo", "base-devel", "neovim", "kitty-terminfo", "trizen"]; 
+pub const DEFAULT_OS_ARCH: &str = "armtix";
 pub const DEFAULT_OS_BASE: &str = "Artix";
 pub const DEFAULT_OS_FLAVOR: &str = "Bastille OS";
+pub const DEFAULT_OS_INIT: &str = formatcp!("{DEFAULT_OS_ARCH}-{DEFAULT_INIT}");
 pub const DEFAULT_SHELL: &str = "/bin/bash";
-pub const DEFAULT_USERGROUP_USER: &str = "armtix"; 
+pub const DEFAULT_USERGROUP_USER: &str = DEFAULT_OS_ARCH; 
 pub const DEFAULT_USERGROUPS: &str = "wheel,sys,audio,input,video,storage,lp,network,users,power"; 
-pub const DEFAULT_USERNAME: &str = "armtix";
+pub const DEFAULT_USERNAME: &str = DEFAULT_OS_ARCH;
 
 
 // bootloader types
@@ -67,7 +68,6 @@ pub const TXT_CLEAN_INSTALL: &str = concatcp!("Make label", DOTS);
 pub const TXT_UMOUNT_DIRS: &str = concatcp!("Unmount directories", DOTS);
 
 // filenames
-pub const FILE_XZ_ARMTIX: &str = "armtix-dinit-20240831.tar.xz";
 pub const FILE_QEMU_STATIC: &str = "qemu-aarch64-static";
 
 // main mount directory
@@ -127,7 +127,6 @@ pub const LOC_MAHRK_IMAZJ_FINI: &str = LOC_MAHRK_PAKEHT_FS_EQSTALE;
 // Host -> Guest installation directories 
 pub const LOC_HG_QEMU_USER_STATIC: &str = formatcp!("{DIR_HG_ROOT}{DIR_USR_BIN}/{FILE_QEMU_STATIC}");
 pub const LOC_HG_FSTAB: &str = formatcp!("{DIR_HG_ROOT}{LOC_FSTAB}");
-pub const LOC_FILE_XZ_ARMTIX: &str = formatcp!("{DIR_MNT}/{FILE_XZ_ARMTIX}");
 
 // URLs
 pub const URL_ARMTIX_DL: &str = "https://armtixlinux.org/images/";

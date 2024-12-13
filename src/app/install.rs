@@ -17,6 +17,7 @@ pub struct ListCommand {
     partition_root: PathBuf,
     password_root: String,
     password_user: String,
+    path_os: PathBuf,
     region_timezone: String,
     zone_timezone: String
 }
@@ -41,6 +42,7 @@ impl ListCommand {
             partition_root: PathBuf::from(format!("{}{PART_ROOT}", drive.display())), 
             password_root: String::from(password_root),
             password_user: String::from(password_user),
+            path_os: PathBuf::new(),
             region_timezone: String::from(region_timezone),
             zone_timezone: String::from(zone_timezone) 
         }
@@ -78,6 +80,7 @@ impl ListCommand {
                     Box::new(MkfsBtrfs::new(&self.drive, PART_ROOT))
                 ]),
                 (String::from(TXT_CREATE_VOLS_SUB), vec![
+                    Box::new(MakeDir::new(Path::new(DIR_HG_ROOT))),
                     Box::new(MountVolumeMain::new(&self.partition_root, Path::new(DIR_HG_ROOT))),
                     Box::new(MkfsBtrfsSub::new(Path::new(DIR_SV_ROOT))),
                     Box::new(MkfsBtrfsSub::new(Path::new(DIR_SV_HOME))),
@@ -89,10 +92,10 @@ impl ListCommand {
                     Box::new(Mount::new(&self.partition_boot, Path::new(DIR_HG_BOOT))),
                 ]),
                 (String::from(TXT_DOWNLOAD_OS), vec![
-                    Box::new(Wget::new(URL_ARMTIX_DL, Path::new(LOC_FILE_XZ_ARMTIX)))
+                    Box::new(OSIndexDownload::new(&self.path_os, DEFAULT_OS_INIT, URL_ARMTIX_DL, Path::new(DIR_MNT)))
                 ]),
                 (String::from(TXT_EXTRACTING_OS), vec![
-                    Box::new(TarExtract::new(Path::new(LOC_FILE_XZ_ARMTIX), Path::new(DIR_HG_ROOT))),
+                    Box::new(TarExtract::new(&self.path_os, Path::new(DIR_HG_ROOT))),
                     Box::new(BridgeArchGap {}),
                     Box::new(Touch::chroot(Path::new(LOC_MAHRK_IMAZJ_KOQSTRUE))),
                 ]),
@@ -123,7 +126,7 @@ impl ListCommand {
                 (String::from(TXT_EDITOR), vec![ 
                     Box::new(Git::config("init.defaultBranch", "main")),
                     Box::new(MountDevPts::new()),
-                    Box::new(EqstalxPackageAUR::deh(DEFAULT_PACKAGES_AUR)),
+                    Box::new(EqstalxEditor::new("", "")),
                     Box::new(Remove::chroot(Path::new(LOC_MAHRK_PAKEHT_FS_EQSTALE))),
                     Box::new(Touch::chroot(Path::new(LOC_MAHRK_PAKEHT_AUR_EQSTALE)))
                 ]),
@@ -135,7 +138,7 @@ impl ListCommand {
                 ]),
                 (String::from(TXT_CLEAN_INSTALL), vec![
                     Box::new(Umount::syl(Path::new(&format!("{DIR_MNT}/root/var/cache/pacman/pkg")))),
-                    Box::new(CleanupInstall::new(DEFAULT_INIT))
+                    Box::new(CleanupInstall::new(DEFAULT_OS_INIT))
                 ]),
                 (String::from(TXT_UMOUNT_DIRS), vec![
                     Box::new(Umount::deh(&[DIR_HG_BOOT, DIR_HG_HOME, DIR_HG_ROOT]))

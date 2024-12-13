@@ -3,13 +3,13 @@ use std::path::{Path, PathBuf};
 use duct::cmd;
 use duct::Expression;
 
+use reqwest;
+use scraper::Html;
+
 use crate::app::commands::read::CommandRead;
 use crate::shared::constants::command::*;
 use crate::shared::constants::install::*;
 use crate::shared::constants::error::ErrorInstaller::FailedReadCommand; 
-
-// reg expressions
-// pub const REX_HD: &str = "'s/\\s*\\([\\+0-9a-zA-Z]*\\).*/\\1/'";
 
 // cleanup dirs
 pub const CLEANUP_CMDS: [&str; 11] = [
@@ -162,7 +162,7 @@ impl CommandRun for CleanupInstall {
     fn prepare(&self) -> TypeCommandRun {
         let mut deh_expr = CLEANUP_CMDS.iter().map(|e| 
             cmd!(SUDO, RM, Path::new(&format!("{DIR_MNT}/{}", e)))).collect::<Vec<Expression>>();
-        deh_expr.push(cmd!(SUDO, RM, Path::new(&format!("{DIR_MNT}/armtix-{}-2024*", &self.init))));
+        deh_expr.push(cmd!(SUDO, RM, Path::new(&format!("{DIR_MNT}/{}-2024*", &self.init))));
         TypeCommandRun::Deh(deh_expr)
     }
 }
@@ -184,6 +184,46 @@ impl CommandRun for DdFirstMbs {
         TypeCommandRun::Syl(cmd!(SUDO, DD, IF_DEV_ZERO, format!("of={}", self.drive.display()), BS_1M, COUNT_32, STATUS_NONE))
     }
 }
+
+pub struct EqstalxEditor {
+    keymap: String,
+    user: String
+}
+
+impl EqstalxEditor {
+    pub fn new(user: &str, keymap: &str) -> EqstalxEditor {
+        EqstalxEditor {
+            keymap: keymap.into(), 
+            user: user.into()
+        }
+    }
+}
+
+impl CommandRun for EqstalxEditor {
+    fn prepare(&self) -> TypeCommandRun {
+        let dir_nvim_guest = format!("{DIR_HG_ROOT}/home/{}/.config/nvim", &self.user);
+        let dir_nvim_host = "home/bas/.config/nvim";
+        let dir_keymaps_guest = format!("{}/keymaps", dir_nvim_guest);
+        let dir_keymaps_host = format!("{}/keymaps", dir_nvim_host);
+        let dir_keymap = format!("/home/bas/SE_Bastille/src/files/{}.lua", self.keymap);
+
+        let copy_nvim = cmd!(RSYNC, ARG_A, ARL_EXCLUDE, Path::new(&dir_keymaps_guest), 
+            Path::new(dir_nvim_host), Path::new(&dir_nvim_guest));
+
+        match self.keymap.as_str() {
+            "yr" =>
+                TypeCommandRun::Deh(vec![
+                    copy_nvim,
+                    cmd!(ARTIX_CHROOT, DIR_HG_ROOT, MKDIR, Path::new(&dir_keymaps_host)),
+                    cmd!(CP, Path::new(&dir_keymap), Path::new(&dir_keymaps_guest))
+                ]),
+            _ =>
+            TypeCommandRun::Syl(copy_nvim)
+        }
+    }
+}
+
+
 
 pub struct EqstalxFs {}
 impl EqstalxFs {}
@@ -229,12 +269,13 @@ impl CommandRun for EqstalxPackage {
     }
 }
 
+#[allow(dead_code)]
 pub struct EqstalxPackageAUR {
     packages: Vec<String>
 }
 
+#[allow(dead_code)]
 impl EqstalxPackageAUR {
-    #[allow(dead_code)]
     pub fn syl(package: &str) -> EqstalxPackage {
         EqstalxPackage {
             packages: vec![package.into()] 
@@ -746,26 +787,41 @@ impl CommandRun for UmountDrive {
     }
 }
 
-pub struct Wget {
-    path: PathBuf,
-    url_download: String
+pub struct OSIndexDownload<'a> {
+    os_build: String,
+    path_dest: PathBuf,
+    path_os: &'a mut PathBuf,
+    url_index: String,
 }
 
-impl Wget {
-    pub fn new(url_download: &str, path: &Path) -> Wget {
-        Wget {
-            path: path.into(),
-            url_download: String::from(url_download)
+impl OSIndexDownload<'_> {
+    pub fn new<'a>(path_os: &mut PathBuf, os_build: &'a str, url_index: &'a str, path_dest: &'a Path) -> OSIndexDownload<'a> {
+        OSIndexDownload {
+            path_os: &mut path_os,
+            path_dest: path_dest.into(),
+            os_build: os_build.into(),
+            url_index: String::from(url_index),
         }
     }
 }
 
-impl CommandRun for Wget {
+impl CommandRun for OSIndexDownload<'_> {
     fn prepare(&self) -> TypeCommandRun {
-        let path = &self.path; 
-        match path.exists() {
-            false => TypeCommandRun::Syl(cmd!(SUDO, WGET, ARG_Q, &self.url_download).dir(path)),
-            true => TypeCommandRun::Kuq(),
+
+        match reqwest::blocking::get(&self.url_index) {
+            Ok(html) => {
+                let doc = Html::parse_document(html);
+                info!("html: {}", html);
+                info!("doc: {:?}", doc);
+                let path = &self.path_dest;
+                *self.path_os = path;
+                panic!("test");
+                match path.exists() {
+                    false => TypeCommandRun::Syl(cmd!(SUDO, WGET, ARG_Q, &self.url_index).dir(path)),
+                    true => TypeCommandRun::Kuq(),
+                }
+            }
+            Err(err) => panic!("Error: {}", err)
         }
     }
 }

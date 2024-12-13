@@ -6,7 +6,7 @@ pub const AWK: &str = "awk";
 // pub const BASH: &str = "bash";
 pub const BTRFS: &str = "btrfs";
 pub const CAT: &str = "cat";
-// pub const CURL: &str = "curl";
+pub const CP: &str = "cp";
 pub const DD: &str = "dd";
 pub const ECHO: &str = "echo";
 pub const FSTABGEN: &str = "fstabgen";
@@ -27,6 +27,7 @@ pub const PACMAN: &str = "pacman";
 pub const PARTED: &str = "parted";
 pub const PARTPROBE: &str = "partprobe";
 pub const RM: &str = "rm";
+pub const RSYNC: &str = "rsync";
 pub const SED: &str = "sed";
 pub const SH: &str = "sh"; 
 pub const SUDO: &str = "sudo";
@@ -77,6 +78,7 @@ pub const EOA: &str = "--";
 
 // long arguments
 pub const ARL_DIR: &str = "--directory";
+pub const ARL_EXCLUDE: &str = "--exclude";
 pub const ARL_FILTER: &str = "--filter";
 pub const ARL_GLOBAL: &str = "--global";
 pub const ARL_GROUP_IS: &str = "--group=";

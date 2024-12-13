@@ -5,7 +5,7 @@ pub struct CommandExecute {}
 impl CommandExecute {
 
     pub fn setup_keymap(keymap: &str, keyvar: &str) {
-        match cmd!("sudo", "setup-keymap", keymap, keyvar).run() {
+        match cmd!("sudo", "loadkeys", keymap, keyvar).run() {
             Ok(_) => {},
             Err(e) => panic!("procedure setup keymap failed\n{}", e),
         }
