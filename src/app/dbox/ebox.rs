@@ -7,9 +7,11 @@ use dialog::{backends::Dialog, DialogBox};
 
 // Error box dimensions 
 const DEFAULT_WIDTH: u32 = 40;
+const EXTRA_WIDTH: u32 = 60;
 const DEFAULT_HEIGHT: u32 = 10;
 
 // Error box var names
+const DEVICE: &str = "Device";
 const FULLNAME: &str = "Fullname";
 const USERNAME: &str = "Username";
 const HOSTNAME: &str = "Hostname";
@@ -20,6 +22,9 @@ const PASSWORD_USER: &str = "User password";
 const ERR_EMPTY: &str = " cannot be empty";
 const ERR_INVALID: &str = " contains invalid characters";
 const ERR_NOMATCH: &str = " do not match!";
+const ERR_NOTFOUND_DEVICE: &str = " cannot be found!\n\
+    Check if you have your device inserted and try again.\n\
+    Otherwise contact your administrator.";
 
 // Error box unwrap failure text 
 const EXP_EBOX: &str = "Could not display message box.";
@@ -44,7 +49,35 @@ impl BoxError<'_> {
     }
 }
 
+pub struct BoxErrorV<'a> {
+    width: u32,
+    height: u32,
+    text: EboxTextV<'a>,
+    page: Page,
+}
+
+impl BoxErrorV<'_> {
+    pub fn handle(mut self, var: String) -> Page {    
+        self.text.var = var;
+        let dbox = Dialog::new()
+        .set_backtitle(TITRFOQ)
+        .set_width(self.width)
+        .set_height(self.height);
+        dialog::Message::new(self.text.to_string())
+            .show_with(dbox)
+            .expect(EXP_EBOX);
+        self.page.clone()
+    }
+}
+
+
 pub struct EboxText<'a> {
+    vartype: &'a str,
+    errortype: &'a str,
+}
+
+pub struct EboxTextV<'a> {
+    var: String,
     vartype: &'a str,
     errortype: &'a str,
 }
@@ -56,10 +89,17 @@ impl fmt::Display for EboxText<'_> {
     }
 }
 
+impl fmt::Display for EboxTextV<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { 
+        writeln!(f, "{} {} {}", self.vartype, self.var, self.errortype)?;
+        writeln!(f, "\n\t\t\tPlease try again")
+    }
+}
+
 pub const EBOX_EMPTY_FULLNAME: BoxError = BoxError {
     width: DEFAULT_WIDTH, 
     height: DEFAULT_HEIGHT, 
-    text: EboxText{
+    text: EboxText {
         vartype: FULLNAME,
         errortype: ERR_EMPTY,
     }, 
@@ -69,7 +109,7 @@ pub const EBOX_EMPTY_FULLNAME: BoxError = BoxError {
 pub const EBOX_EMPTY_HOSTNAME: BoxError = BoxError {
     width: DEFAULT_WIDTH, 
     height: DEFAULT_HEIGHT, 
-    text: EboxText{
+    text: EboxText {
         vartype: HOSTNAME,
         errortype: ERR_EMPTY,
     }, 
@@ -79,7 +119,7 @@ pub const EBOX_EMPTY_HOSTNAME: BoxError = BoxError {
 pub const EBOX_EMPTY_PASSWORD_ROOT: BoxError = BoxError {
     width: DEFAULT_WIDTH, 
     height: DEFAULT_HEIGHT, 
-    text: EboxText{
+    text: EboxText {
         vartype: PASSWORD_ROOT,
         errortype: ERR_EMPTY,
     }, 
@@ -89,7 +129,7 @@ pub const EBOX_EMPTY_PASSWORD_ROOT: BoxError = BoxError {
 pub const EBOX_EMPTY_PASSWORD_USER: BoxError = BoxError {
     width: DEFAULT_WIDTH, 
     height: DEFAULT_HEIGHT, 
-    text: EboxText{
+    text: EboxText {
         vartype: PASSWORD_USER,
         errortype: ERR_EMPTY,
     }, 
@@ -99,7 +139,7 @@ pub const EBOX_EMPTY_PASSWORD_USER: BoxError = BoxError {
 pub const EBOX_EMPTY_USERNAME: BoxError = BoxError {
     width: DEFAULT_WIDTH, 
     height: DEFAULT_HEIGHT, 
-    text: EboxText{
+    text: EboxText {
         vartype: USERNAME,
         errortype: ERR_EMPTY,
     }, 
@@ -109,7 +149,7 @@ pub const EBOX_EMPTY_USERNAME: BoxError = BoxError {
 pub const EBOX_INVALID_HOSTNAME: BoxError = BoxError {
     width: DEFAULT_WIDTH, 
     height: DEFAULT_HEIGHT, 
-    text: EboxText{
+    text: EboxText {
         vartype: HOSTNAME,
         errortype: ERR_INVALID,
     }, 
@@ -119,7 +159,7 @@ pub const EBOX_INVALID_HOSTNAME: BoxError = BoxError {
 pub const EBOX_INVALID_USERNAME: BoxError = BoxError {
     width: DEFAULT_WIDTH, 
     height: DEFAULT_HEIGHT, 
-    text: EboxText{
+    text: EboxText {
         vartype: USERNAME,
         errortype: ERR_INVALID,
     }, 
@@ -139,9 +179,20 @@ pub const EBOX_NOMATCH_PASSWORD_ROOT: BoxError = BoxError {
 pub const EBOX_NOMATCH_PASSWORD_USER: BoxError = BoxError {
     width: DEFAULT_WIDTH, 
     height: DEFAULT_HEIGHT, 
-    text: EboxText{
+    text: EboxText {
         vartype: PASSWORD_USER,
         errortype: ERR_NOMATCH,
     }, 
     page: Page::PasswordUserSgn,
+};
+
+pub const EBOX_NOTFOUND_DEVICE: BoxErrorV = BoxErrorV {
+    width: EXTRA_WIDTH, 
+    height: DEFAULT_HEIGHT, 
+    text: EboxTextV {
+        var: String::new(),
+        vartype: DEVICE,
+        errortype: ERR_NOTFOUND_DEVICE,
+    }, 
+    page: Page::MenuMain,
 };

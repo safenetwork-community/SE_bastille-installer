@@ -1,5 +1,4 @@
 use std::path::Path;
-use std::str; 
 
 use const_format::formatcp;
 use duct::cmd;
@@ -22,19 +21,14 @@ pub const PATH_BKEYMAP: &str = "/usr/share/bkeymaps";
 pub const PATH_ZONEINFO: &str = "/usr/share/zoneinfo";  
 
 // Scols-filter arguments
-const ARG_FILTER_MOUNTED_VOL_MAIN: &str = "MOUNTPOINT =~ \"..*\"";
-// const ARG_FILTER_MOUNTED_VOLS: &str = "MOUNTPOINTS =~ \"..*\"";
-const ARG_FILTER_PTS_ONLY_1: &str = "NAME =~ \"";
-const ARG_FILTER_PTS_ONLY_2: &str = "[0-9]*\"";
+const ARG_FILTER_MOUNTED: &str = r#"MOUNTPOINT =~ '..*'"#;
+const ARG_FILTER_NAME: &str = r#"NAME =~"#;
+const ARG_FILTER_TYPE_DISK: &str = formatcp!("&& TYPE =~ '{ACS_DISK}'");
+const ARG_FILTER_TYPE_PART: &str = formatcp!("&& TYPE =~ '{ACS_PART}'");
+const ARG_FILTER_E_PTS_MTD: &str = formatcp!("{ARG_FILTER_TYPE_PART} && {ARG_FILTER_MOUNTED}");
 
-// Arguments
-// const ARG_COL_MOUNTPOINTS: &str = "-no mountpoints -lp";
-const ARG_COL_NAME_MOUNTPOINT: &str = "-no name,mountpoint -lp";
-const ARG_MOUNTED_VOL_MAIN_1: &str = formatcp!("{ARG_COL_NAME_MOUNTPOINT} --filter '{ARG_FILTER_PTS_ONLY_1}");
-const ARG_MOUNTED_VOL_MAIN_2: &str = formatcp!("{ARG_FILTER_PTS_ONLY_2} && {ARG_FILTER_MOUNTED_VOL_MAIN}'");
-// const ARG_MOUNTED_VOLS_DEV_1: &str = formatcp!("{ARG_COL_MOUNTPOINTS} --filter '{ARG_FILTER_PTS_ONLY_1}");
-// const ARG_MOUNTED_VOLS_DEV_2: &str = formatcp!("{ARG_FILTER_PTS_ONLY_2} && {ARG_FILTER_MOUNTED_VOLS}'");
-const ARG_LIST_DRIVES: &str = "-dn -o NAME";
+const ACS_NAME: &str = "NAME";
+const ARG_NAME_MPT: &str = "name,mountpoint";
 
 // General programs
 const SED: &str = "sed";
@@ -48,7 +42,7 @@ pub const LIST_MENU_DEVICE: &[[&str; 2]] = &[
 ];
 
 pub const LIST_MENU_MAIN: &[(&str, Page)] = &[
-    ("Wizard Config", Page::MenuDevice), 
+    ("Wizard Config", Page::MenuServerBoard), 
     ("Manual Config", Page::MenuConfig), 
     ("Change keyboard layout", Page::MenuKeymapHost),
     ("Start install", Page::GaugeInstallation),
@@ -57,7 +51,7 @@ pub const LIST_MENU_MAIN: &[(&str, Page)] = &[
 ];
 
 pub const LIST_MENU_CONFIG: &[(&str, Page)] = &[
-    ("select device", Page::MenuDevice),
+    ("select device", Page::MenuServerBoard),
     ("enter username", Page::InputUsername),
     ("enter usergroups", Page::InputUsergroups),
     ("enter fullname", Page::InputFullname),
@@ -73,11 +67,35 @@ pub struct CommandRead {}
 
 impl CommandRead {
 
+    pub fn mountpoints_drive(drive: &Path) -> Result<String, std::io::Error> {
+        let filter = format!(r#"{ARG_FILTER_NAME} '{}' {ARG_FILTER_E_PTS_MTD}"#, 
+            drive.file_name().unwrap().to_str().unwrap());
+        let command = cmd!(LSBLK, ARG_LN, ARG_O, ACS_MOUNTPOINTS, ARL_FILTER, filter);
+        command.stderr_capture().unchecked().read()
+    }
+
+    pub fn partitions_drive(drive: &str) -> Vec<[String; 2]> {
+        let filter = format!(r#"{ARG_FILTER_NAME} '{}' {ARG_FILTER_TYPE_PART}"#, drive);
+        let command = cmd!(LSBLK, ARG_LN, ARG_O, ACS_NAME, ARL_FILTER, filter);
+
+        match command.stderr_capture().unchecked().read() {
+            Ok(s) => {
+                let mut list: Vec<[String; 2]> = Vec::new(); 
+                for line in s.lines() {
+                list.push([String::from(drive), String::from(line.strip_prefix(drive).unwrap())]); 
+                } 
+            list
+            },
+            Err(e) => panic!("{ERR_FAILED_EXECUTE}: {:?}\n{e}", command),
+        }
+
+    }
+
     pub fn drives() -> Vec<[String; 2]> {
         
-        let command_sh = format!("{LSBLK} {ARG_LIST_DRIVES}"); 
+        let command = cmd!(LSBLK, ARG_DN, ARG_O, ACS_NAME); 
         
-        match cmd!(SH, ARG_C, command_sh.clone()).read() {
+        match command.read() {
             Ok(s) => {
                 let mut list: Vec<[String; 2]> = Vec::new(); 
                 for line in s.lines() {
@@ -85,7 +103,24 @@ impl CommandRead {
                 } 
             list
             },
-            Err(e) => panic!("{ERR_FAILED_EXECUTE}: {command_sh}\n{e}"),
+            Err(e) => panic!("{ERR_FAILED_EXECUTE}: {:?}\n{e}", command),
+        }
+    }
+
+    pub fn drive_exists(drive: &Path) -> bool {
+        let filter = format!(r#"{ARG_FILTER_NAME} '{}' {ARG_FILTER_TYPE_DISK}"#, drive.file_name().unwrap().to_str().unwrap());        
+        let command = cmd!(LSBLK, ARG_DN, ARG_O, ACS_NAME, ARL_FILTER, filter);
+        info!("command: {:?}", command);
+
+        match command.read() {
+            Err(e) => panic!("{ERR_FAILED_EXECUTE}: {SUDO} {:?}\n{}", command, e),
+            Ok(s) => {
+                match s.lines().count() {
+                    0 => false,
+                    1 => true,
+                    integer => panic!("{ERR_FAILED_EXECUTE}: {SUDO} {:?}\n{ERR_OUT_OF_BOUNDS}: Max results: 1, Found {}\n{}", command, integer, s),
+                }
+            },
         }
     }
 
@@ -99,17 +134,17 @@ impl CommandRead {
             REGEX_FIND_DIRS_ALL, SED_FIND_DEFAULT)
     }
 
-    pub fn is_mounted(path_drive: &Path) -> bool {
-        let command_sh = format!(r#"{LSBLK} {ARG_MOUNTED_VOL_MAIN_1}{}{ARG_MOUNTED_VOL_MAIN_2}"#, path_drive.display());
-        let command = cmd!(SUDO, EOA, SH, ARG_C, command_sh.clone());
+    pub fn is_mounted(drive: &str) -> bool {
+        let filter = format!(r#"{ARG_FILTER_NAME} '{}' {ARG_FILTER_E_PTS_MTD}"#, drive);
+        let command = cmd!(LSBLK, ARG_NO, ARG_NAME_MPT, ARG_LP, ARL_FILTER, filter);
 
         match command.read() {
-            Err(e) => panic!("{ERR_FAILED_EXECUTE}: {SUDO} {command_sh}\n{}", e),
+            Err(e) => panic!("{ERR_FAILED_EXECUTE}: {SUDO} {:?}\n{}", command, e),
             Ok(s) => {
                 match s.lines().count() {
                     0 => false,
                     1 => true,
-                    integer => panic!("{ERR_FAILED_EXECUTE}: {SUDO} {command_sh}\n{ERR_OUT_OF_BOUNDS}: Max results: 1, Found {}\n{}", integer, s),
+                    integer => panic!("{ERR_FAILED_EXECUTE}: {SUDO} {:?}\n{ERR_OUT_OF_BOUNDS}: Max results: 1, Found {}\n{}", command, integer, s),
                 }
             },
         }

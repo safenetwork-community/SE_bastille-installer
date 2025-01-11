@@ -1,12 +1,16 @@
+use std::cell::RefCell;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 use duct::cmd;
 use duct::Expression;
+
 
 use reqwest;
 use scraper::Html;
 
 use crate::app::commands::read::CommandRead;
+use crate::app::dbox::r#type::Page;
 use crate::shared::constants::command::*;
 use crate::shared::constants::install::*;
 use crate::shared::constants::error::ErrorInstaller::FailedReadCommand; 
@@ -29,7 +33,8 @@ pub const CLEANUP_CMDS: [&str; 11] = [
 pub enum TypeCommandRun {
     Syl(Expression),
     Deh(Vec<Expression>),    
-    Kuq()
+    Kuq(),
+    Ehryr(Page)
 }
 
 pub trait CommandRun {
@@ -181,7 +186,7 @@ impl DdFirstMbs {
 
 impl CommandRun for DdFirstMbs {
     fn prepare(&self) -> TypeCommandRun {
-        TypeCommandRun::Syl(cmd!(SUDO, DD, IF_DEV_ZERO, format!("of={}", self.drive.display()), BS_1M, COUNT_32, STATUS_NONE))
+        TypeCommandRun::Syl(cmd!(SUDO, DD, ACS_IF_DEV_ZERO, format!("of={}", self.drive.display()), ACS_BS_1M, ACS_COUNT_32, ACS_STATUS_NONE))
     }
 }
 
@@ -364,7 +369,7 @@ impl MakeLabel {
 
 impl CommandRun for MakeLabel {
     fn prepare(&self) -> TypeCommandRun {
-        TypeCommandRun::Syl(cmd!(SUDO, PARTED, ARG_S, &self.filesystem, MKLABEL, GPT))
+        TypeCommandRun::Syl(cmd!(SUDO, PARTED, ARG_S, &self.filesystem, MKLABEL, ACS_GPT))
     }
 }
 
@@ -384,7 +389,8 @@ impl MakePartitionBoot {
 
 impl CommandRun for MakePartitionBoot {
     fn prepare(&self) -> TypeCommandRun {
-        TypeCommandRun::Syl(cmd!(SUDO, PARTED, ARG_A, OPTIMAL, ARG_S, &self.filesystem, MKPART, PRIMARY, &self.format, ACS_1MIB, ACS_BOOT_SPACE))
+        TypeCommandRun::Syl(cmd!(SUDO, PARTED, &self.filesystem, ARG_A, ACS_OPTIMAL, ACS_UNIT, ACS_MIB, MKPART, &self.format, 
+                N_BOOT_START.to_string(), N_BOOT_SPACE.to_string()))
     }
 }
 
@@ -404,7 +410,8 @@ impl MakePartitionRoot {
 
 impl CommandRun for MakePartitionRoot {
     fn prepare(&self) -> TypeCommandRun {
-        TypeCommandRun::Syl(cmd!(SUDO, PARTED, ARG_A, OPTIMAL, ARG_S, &self.filesystem, MKPART, PRIMARY, &self.format, ACS_BOOT_SPACE, C_PERCENT))
+        TypeCommandRun::Syl(cmd!(SUDO, PARTED, &self.filesystem, ARG_A, ACS_OPTIMAL, ACS_UNIT, ACS_MIB, MKPART, &self.format, 
+                N_BOOT_SPACE.to_string(), ACS_C_PERCENT))
     }
 }
 
@@ -424,7 +431,7 @@ impl MkfsBtrfs {
 
 impl CommandRun for MkfsBtrfs {
     fn prepare(&self) -> TypeCommandRun {
-        TypeCommandRun::Syl(cmd!(SUDO, MKFS_BTRFS, ARG_M, SINGLE, ARGS_L, LABEL_ROOT_AND_HOME, ARG_F, format!("{}{}", 
+        TypeCommandRun::Syl(cmd!(SUDO, MKFS_BTRFS, ARG_M, ACS_SINGLE, ARGS_L, LABEL_ROOT_AND_HOME, ARG_F, format!("{}{}", 
             &self.filesystem.display(), &self.partition)))
     }
 }
@@ -519,7 +526,7 @@ impl MountVolumeMain {
 
 impl CommandRun for MountVolumeMain {
     fn prepare(&self) -> TypeCommandRun {
-        TypeCommandRun::Syl(cmd!(SUDO, MOUNT, ARG_O, MAIN_VOL_COMPRESS, &self.filesystem, &self.mountpoint))
+        TypeCommandRun::Syl(cmd!(SUDO, MOUNT, ARG_O, ACS_MAIN_VOL_COMPRESS, &self.filesystem, &self.mountpoint))
     }
 }
 
@@ -541,7 +548,7 @@ impl MountVolumeSub {
 
 impl CommandRun for MountVolumeSub {
     fn prepare(&self) -> TypeCommandRun {
-        TypeCommandRun::Syl(cmd!(SUDO, MOUNT, ARG_O, format!("{SUB_VOL_COMPRESS}{}", &self.name), &self.filesystem, &self.mountpoint))
+        TypeCommandRun::Syl(cmd!(SUDO, MOUNT, ARG_O, format!("{ACS_SUB_VOL_COMPRESS}{}", &self.name), &self.filesystem, &self.mountpoint))
     }
 }
 
@@ -607,27 +614,33 @@ impl CommandRun for Remove {
 
 
 pub struct RemovePartitionsDrive {
-    pub filesystem: PathBuf,
+    pub drive: PathBuf,
 }
 
 impl RemovePartitionsDrive {
-    pub fn new(filesystem: &Path) -> RemovePartitionsDrive {
+    pub fn new(drive: &Path) -> RemovePartitionsDrive {
         RemovePartitionsDrive {
-            filesystem: filesystem.into()
+            drive: drive.into()
         }
     }
 }
 
 impl CommandRun for RemovePartitionsDrive { 
     fn prepare(&self) -> TypeCommandRun {
-        match cmd!(SUDO, PARTED, &self.filesystem, ACS_PRINT)
-                .pipe(cmd!(AWK, ACS_PRINT_C1_BW_SPACE)).stderr_capture().unchecked().read() {
-            Err(e) => panic!("{}", FailedReadCommand(format!("{e}"))),
-            Ok(s) => {
-                TypeCommandRun::Deh(s.lines().map(|e| {
-                    cmd!(SUDO, PARTED, ARG_S, &self.filesystem, RM, e)
+        let drive = &self.drive;
+
+        let partitions = CommandRead::partitions_drive(drive.file_name()
+            .unwrap_or_else(|| panic!("Cannot read filename {}", drive.display()))
+                .to_str().unwrap_or_else(|| panic!("Cannot parse filename: {}", drive.display())));
+
+        match partitions.len() {
+            0 => TypeCommandRun::Kuq(),
+            1 => TypeCommandRun::Syl(cmd!(SUDO, PARTED, ARG_S, drive, RM, &partitions[0][1])),
+            _ => {
+                TypeCommandRun::Deh(partitions.iter().map(|e| {
+                    cmd!(SUDO, PARTED, ARG_S, drive, RM, &e[1])
                 }).collect())
-            },
+            }
         }
     }
 }
@@ -669,23 +682,24 @@ impl CommandRun for SetSettingsSystem {
     }
 }
 
-pub struct TarExtract {
-    pub path_from: PathBuf,  
+pub struct TarExtractRc {
+    pub path_from: Rc<RefCell<PathBuf>>,  
     pub path_to: PathBuf  
 }
 
-impl TarExtract {
-    pub fn new(path_from: &Path, path_to: &Path) -> TarExtract {
-        TarExtract {
-            path_from: path_from.into(),
+impl TarExtractRc {
+    pub fn new(path_from: Rc<RefCell<PathBuf>>, path_to: &Path) -> TarExtractRc {
+        TarExtractRc {
+            path_from,
             path_to: path_to.into()
         }
     }
 }
 
-impl CommandRun for TarExtract {
+impl CommandRun for TarExtractRc {
     fn prepare(&self) -> TypeCommandRun {
-        TypeCommandRun::Syl(cmd!(SUDO, TAR, ARG_XF, &self.path_from, ARGS_C, &self.path_to))
+        TypeCommandRun::Syl(cmd!(SUDO, TAR, ARG_XF, 
+                self.path_from.borrow().clone(), ARGS_C, &self.path_to))
     }
 }
 
@@ -740,7 +754,8 @@ impl Umount {
 impl CommandRun for Umount {
     fn prepare(&self) -> TypeCommandRun {
         let paths = &self.paths.iter().filter(|path| {
-            CommandRead::is_mounted(path) 
+            CommandRead::is_mounted(path.file_name().unwrap_or_else(|| panic!("Cannot read filename {}", path.display()))
+                .to_str().unwrap_or_else(|| panic!("Cannot parse filename: {}", path.display()))) 
         }).collect::<Vec<&PathBuf>>();
 
         match paths.len() {
@@ -756,48 +771,51 @@ impl CommandRun for Umount {
 }
 
 pub struct UmountDrive {
-    pub filesystem: PathBuf,
+    pub drive: PathBuf,
 }
 
 impl UmountDrive {
-    pub fn new(filesystem: &Path) -> UmountDrive {
+    pub fn new(drive: &Path) -> UmountDrive {
         UmountDrive {
-            filesystem: filesystem.into()
+            drive: drive.into()
         }
     }
 }
 
 impl CommandRun for UmountDrive {
     fn prepare(&self) -> TypeCommandRun {
-        match cmd!(SH, ARG_C, format!("{LSBLK} {ARG_NO} {ACS_MOUNTPOINTS} {ARG_LP} {ARL_FILTER} \
-            'NAME =~ \"{}[0-9]*\" && MOUNTPOINTS =~ \"..*\"'", self.filesystem.display()))
-            .read() {
-            Err(e) => {
-                match e.to_string().ends_with("exited with code 32") {
-                    true => TypeCommandRun::Kuq(), 
-                    false => panic!("{}", FailedReadCommand(format!("{e}"))),
+        match CommandRead::drive_exists(&self.drive) { 
+           true => { 
+                match CommandRead::mountpoints_drive(&self.drive) {
+                    Err(e) => {
+                        match e.to_string().ends_with("exited with code 32") {
+                            true => TypeCommandRun::Kuq(), 
+                            false => panic!("{}", FailedReadCommand(format!("{e}"))),
+                        }
+                    }
+                    Ok(s) => {
+                        TypeCommandRun::Deh(s.lines().map(|e| { 
+                            cmd!(SUDO, UMOUNT, e)
+                        }).collect())
+                    },
                 }
-            }
-            Ok(s) => {
-                TypeCommandRun::Deh(s.lines().map(|e| { 
-                    cmd!(SUDO, UMOUNT, e)
-                }).collect())
-            },
+           }
+           false => TypeCommandRun::Ehryr(Page::NotFoundDevice)
         }
     }
 }
 
-pub struct OSIndexDownload<'a> {
+pub struct OSIndexDownload {
     os_build: String,
     path_dest: PathBuf,
-    path_os: &'a mut PathBuf,
+    path_os: Rc<RefCell<PathBuf>>,
     url_index: String,
 }
 
-impl OSIndexDownload<'_> {
-    pub fn new<'a>(path_os: &mut PathBuf, os_build: &'a str, url_index: &'a str, path_dest: &'a Path) -> OSIndexDownload<'a> {
+impl OSIndexDownload {
+    pub fn new(path_os: Rc<RefCell<PathBuf>>, os_build: &str, url_index: &str, path_dest: &Path) -> OSIndexDownload {
         OSIndexDownload {
-            path_os: &mut path_os,
+            path_os,
             path_dest: path_dest.into(),
             os_build: os_build.into(),
             url_index: String::from(url_index),
@@ -805,20 +823,26 @@ impl OSIndexDownload<'_> {
     }
 }
 
-impl CommandRun for OSIndexDownload<'_> {
+impl CommandRun for OSIndexDownload {
     fn prepare(&self) -> TypeCommandRun {
 
         match reqwest::blocking::get(&self.url_index) {
-            Ok(html) => {
-                let doc = Html::parse_document(html);
-                info!("html: {}", html);
-                info!("doc: {:?}", doc);
-                let path = &self.path_dest;
-                *self.path_os = path;
-                panic!("test");
-                match path.exists() {
-                    false => TypeCommandRun::Syl(cmd!(SUDO, WGET, ARG_Q, &self.url_index).dir(path)),
-                    true => TypeCommandRun::Kuq(),
+            Ok(resp) => {
+                match resp.status().is_success() {
+                    true => {
+                    let doc = Html::parse_document(resp.text().unwrap().as_str());
+                    info!("doc: {:?}", doc);
+                    info!("os_build: {:?}", self.os_build);
+                    self.path_os.borrow_mut().push(self.path_dest.clone());
+                    panic!("test");
+                    // match path.exists() {
+                    //    false => TypeCommandRun::Syl(cmd!(SUDO, WGET, ARG_Q, &self.url_index).dir(path)),
+                    //    true => TypeCommandRun::Kuq(),
+                    // }
+                    },
+                    false => {
+                        panic!("url not found: {}", &self.url_index);
+                    },
                 }
             }
             Err(err) => panic!("Error: {}", err)

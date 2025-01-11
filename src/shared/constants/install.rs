@@ -29,8 +29,9 @@ pub const DEFAULT_USERNAME: &str = DEFAULT_OS_ARCH;
 pub const TYPE_FS_FAT32: &str = "fat32";
 pub const TYPE_FS_BTRFS: &str = "btrfs";
 
-// partition types
-pub const PRIMARY: &str = "primary";
+// filesystem sizes
+pub const N_BOOT_START: u32 = 32;
+pub const N_BOOT_SPACE: u32 = 512;
 
 // shared texts
 pub const TXT_PARTPROBE: &str = concatcp!("Partprobe", DOTS);

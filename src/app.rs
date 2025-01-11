@@ -24,7 +24,7 @@ pub struct App {
     map_key_guest: String,
     map_key_host: String, 
     msg_error: String,
-    name_device: String,
+    name_serverboard: String,
     name_drive: String,
     name_host: String,
     name_user: String,
@@ -50,7 +50,7 @@ impl App {
             map_key_guest: String::new(),
             map_key_host: String::new(),
             msg_error: String::new(),
-            name_device: String::new(),
+            name_serverboard: String::new(),
             name_drive: String::new(),
             name_full: String::new(),
             name_host: String::new(),
@@ -127,9 +127,9 @@ impl App {
         }
     }
 
-    fn get_box_menu_name_device(&mut self) -> BoxMenuDevice {
-        BoxMenuDevice {
-            name_device: &mut self.name_device,
+    fn get_box_menu_name_serverboard(&mut self) -> BoxMenuServerBoard {
+        BoxMenuServerBoard {
+            name_serverboard: &mut self.name_serverboard,
             single_edit: self.single_edit,
         }
     }
@@ -206,7 +206,7 @@ impl App {
         self.key_pub = String::from("id_pjehrsohmehj_folaht.pub");
         self.locale = String::from("be_FR.utf8");
         self.name_drive = String::from("sda");
-        self.name_device = String::from("test");
+        self.name_serverboard = String::from("test");
         self.name_full = String::from("Fôlat Pjêrsômêj");
         self.name_host = String::from("Rezosur-uq");
         self.name_user = String::from("folaht");
@@ -263,17 +263,18 @@ impl App {
                 Page::InvalidHostname => current_box = EBOX_INVALID_HOSTNAME.handle(),
                 Page::InvalidUsername => current_box = EBOX_INVALID_USERNAME.handle(), 
                 Page::MenuConfig => current_box = Self::get_box_menu_config(self).handle(),
-                Page::MenuDevice => current_box = Self::get_box_menu_name_device(self).handle(),
                 Page::MenuDrive => current_box = Self::get_box_menu_name_drive(self).handle(),
                 Page::MenuMain => current_box = Self::get_box_menu_main(self).handle(),
                 Page::MenuKeymapGuest => current_box = Self::get_box_menu_map_key_guest(self).handle(),
                 Page::MenuKeymapHost => current_box = Self::get_box_menu_map_key_host(self).handle(),
                 Page::MenuKeyvarGuest => current_box = Self::get_box_menu_var_key_guest(self).handle(),
                 Page::MenuKeyvarHost => current_box = Self::get_box_menu_var_key_host(self).handle(),
+                Page::MenuServerBoard => current_box = Self::get_box_menu_name_serverboard(self).handle(),
                 Page::MenuTimezoneRegion => current_box = Self::get_box_menu_region_timezone(self).handle(),
                 Page::MenuTimezoneZone => current_box = Self::get_box_menu_zone_timezone(self).handle(),
                 Page::NoMatchPasswordRoot => current_box = EBOX_NOMATCH_PASSWORD_ROOT.handle(),
                 Page::NoMatchPasswordUser => current_box = EBOX_NOMATCH_PASSWORD_USER.handle(),
+                Page::NotFoundDevice => current_box = EBOX_NOTFOUND_DEVICE.handle(self.name_drive.clone()), 
                 Page::PasswordRootSgn => current_box = Self::get_box_password_root_sign(self).handle(),
                 Page::PasswordRootRpt => current_box = Self::get_box_password_root_repeat(self).handle(),
                 Page::PasswordUserSgn => current_box = Self::get_box_password_user_sign(self).handle(),
@@ -298,7 +299,7 @@ impl App {
     
     fn get_builder_list_command(&self) -> ListCommand {
         ListCommand::new(
-            &self.name_device, &self.name_user, &self.name_full, 
+            &self.name_serverboard, &self.name_user, &self.name_full, 
             &self.password_user, &self.password_root,
             &self.key_pub, Path::new(&format!("/dev/{}", &self.name_drive)), 
             &self.map_key_guest, &self.locale, 

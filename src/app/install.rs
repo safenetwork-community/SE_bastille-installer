@@ -1,8 +1,23 @@
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::path::{Path, PathBuf};
+
 
 use crate::app::commands::run::*;
 
 use crate::shared::constants::install::*;
+
+pub struct RcInstall {
+    path_os: Rc<RefCell<PathBuf>>,
+}
+
+impl RcInstall {
+    pub fn new() -> RcInstall {
+        RcInstall {
+            path_os: Rc::new(RefCell::new(PathBuf::new())),
+        }
+    }
+}
 
 pub struct ListCommand {
     device: String,
@@ -17,7 +32,6 @@ pub struct ListCommand {
     partition_root: PathBuf,
     password_root: String,
     password_user: String,
-    path_os: PathBuf,
     region_timezone: String,
     zone_timezone: String
 }
@@ -42,7 +56,6 @@ impl ListCommand {
             partition_root: PathBuf::from(format!("{}{PART_ROOT}", drive.display())), 
             password_root: String::from(password_root),
             password_user: String::from(password_user),
-            path_os: PathBuf::new(),
             region_timezone: String::from(region_timezone),
             zone_timezone: String::from(zone_timezone) 
         }
@@ -62,6 +75,8 @@ impl ListCommand {
     }
     
     pub fn get_dydeh_command(&self) -> Vec<(String, Vec<Box<dyn CommandRun>>)> {
+        let rc_install = RcInstall::new(); 
+
         match self.device.as_str() {
             "test" =>  vec![
                 (String::from(TXT_RM_PARTITIONS), vec![ 
@@ -92,10 +107,10 @@ impl ListCommand {
                     Box::new(Mount::new(&self.partition_boot, Path::new(DIR_HG_BOOT))),
                 ]),
                 (String::from(TXT_DOWNLOAD_OS), vec![
-                    Box::new(OSIndexDownload::new(&self.path_os, DEFAULT_OS_INIT, URL_ARMTIX_DL, Path::new(DIR_MNT)))
+                    Box::new(OSIndexDownload::new(rc_install.path_os.clone(), DEFAULT_OS_INIT, URL_ARMTIX_DL, Path::new(DIR_MNT)))
                 ]),
                 (String::from(TXT_EXTRACTING_OS), vec![
-                    Box::new(TarExtract::new(&self.path_os, Path::new(DIR_HG_ROOT))),
+                    Box::new(TarExtractRc::new(rc_install.path_os, Path::new(DIR_HG_ROOT))),
                     Box::new(BridgeArchGap {}),
                     Box::new(Touch::chroot(Path::new(LOC_MAHRK_IMAZJ_KOQSTRUE))),
                 ]),

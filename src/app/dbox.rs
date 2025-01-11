@@ -54,18 +54,18 @@ impl HandlerBox for BoxMenuMain<'_> {
     }
 }
 
-pub struct BoxMenuDevice<'a> {
-    pub name_device: &'a mut String,
+pub struct BoxMenuServerBoard<'a> {
+    pub name_serverboard: &'a mut String,
     pub single_edit: bool,
 }
 
-impl HandlerBox for BoxMenuDevice<'_> {
+impl HandlerBox for BoxMenuServerBoard<'_> {
 
     fn handle(&mut self) -> Page {
         match BoxMenu::choice(BoxTypeMenu::Default, self.get_text(),  
             BoxMenu::convert_string_list_to_dbox_list(LIST_MENU_DEVICE)) {
-            (Choice::Yes, Some(device)) => {
-                *self.name_device = device;
+            (Choice::Yes, Some(serverboard)) => {
+                *self.name_serverboard = serverboard;
                 self.next()
             },
             #[allow(non_snake_case)]
@@ -81,7 +81,7 @@ impl HandlerBox for BoxMenuDevice<'_> {
     }
 }
 
-impl HandlerPage for BoxMenuDevice<'_> {
+impl HandlerPage for BoxMenuServerBoard<'_> {
 
     fn next(&self) -> Page {
         match self.single_edit {
@@ -136,7 +136,7 @@ impl HandlerPage for BoxMenuDrive<'_> {
 
     fn previous(&self) -> Page {
         match self.single_edit {
-            false => Page::MenuDevice,
+            false => Page::MenuServerBoard,
             true => Page::MenuConfig,
         }
     }
@@ -767,23 +767,23 @@ impl HandlerGauge for BoxGaugeInstallation {
             }, 
             _ => 0,
         };
-        
-        dydeh_command[c_start..].iter().enumerate().for_each(|(i, (text, deh_command))| {
+
+        for (i, (text, deh_command)) in dydeh_command[c_start..].iter().enumerate() {
             let percent = i * 100 / c_total;
             BoxGauge::show(text.as_str(), percent as u8);
             sleep(Duration::from_millis(50));
 
-            deh_command.iter().enumerate().for_each(|(j, command_opt)| {
+            for (j, command_opt) in deh_command.iter().enumerate() {
                 match command_opt.prepare() {
                     TypeCommandRun::Syl(command) => self.handle_command(command, i, j),
                     TypeCommandRun::Deh(commands) => commands.iter().for_each(|command| {
                         self.handle_command(command.into(), i, j);
                     }),
                     TypeCommandRun::Kuq() => {},
+                    TypeCommandRun::Ehryr(page) => return page,
                 }
-            });
-        });
-
+            }
+        }
         Page::Finish
     }
 }
