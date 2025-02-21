@@ -2,32 +2,32 @@ use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
+use const_format::concatcp;
+
 use duct::cmd;
 use duct::Expression;
 
+use glob::glob;
 
 use reqwest;
-use scraper::Html;
+use scraper::{Html, selector::Selector};
 
 use crate::app::commands::read::CommandRead;
 use crate::app::dbox::r#type::Page;
 use crate::shared::constants::command::*;
-use crate::shared::constants::install::*;
 use crate::shared::constants::error::ErrorInstaller::FailedReadCommand; 
+use crate::shared::constants::install::*;
+use crate::shared::constants::scraper::*;
 
 // cleanup dirs
-pub const CLEANUP_CMDS: [&str; 11] = [
-    "/root/var/cache/pacman/pkg",
-    "/root/usr/bin/qemu-aarch64-static",
-    "/root/var/cache/packman/pkg/*",
-    "/root/var/log/*",
-    "/root/etc/*.pacnew",
-    "/root/usr/lib/systemd/system/systemd-firstboot.service",
-    "/root/etc/machine-id",
-    "/user",
-    "/password",
-    "/rootpassword",
-    LOC_MAHRK_IMAZJ_FINI
+pub const CLEANUP_CMDS: [&str; 7] = [
+    concatcp!(DIR_HG_ROOT, "/var/cache/pacman/pkg"),
+    concatcp!(DIR_HG_ROOT, "/usr/bin/qemu-aarch64-static"),
+    concatcp!(DIR_HG_ROOT, "/var/cache/packman/pkg/*"),
+    concatcp!(DIR_HG_ROOT, "/var/log/*"),
+    concatcp!(DIR_HG_ROOT, "/etc/*.pacnew"),
+    concatcp!(DIR_HG_ROOT, "/usr/lib/systemd/system/systemd-firstboot.service"),
+    concatcp!(DIR_HG_ROOT, "/etc/machine-id"),
 ];
 
 pub enum TypeCommandRun {
@@ -137,9 +137,12 @@ impl CommandRun for ChrootUsermod {
                             cmd!(ARTIX_CHROOT, DIR_HG_ROOT, INSTALL, format!("{ARL_OWNER_IS}{user}"), format!("{ARL_GROUP_IS}{user}"), 
                                 ARG_MOD600, ACS_DEV_NULL, path_auth_keys.clone()), 
                             cmd!(ECHO, path_key_pub_user)
-                                .pipe(cmd!(TEE, ARG_A, path_hg_auth_keys)), 
-                            cmd!(SUDO, INSTALL, format!("{ARL_OWNER_IS}{user}"), format!("{ARL_GROUP_IS}{user}"), 
-                                ARG_MOD644, LOC_PROFILE, format!("{DIR_HG_ROOT}/home/{user}/.profile")), 
+                                .pipe(cmd!(TEE, ARG_A, path_hg_auth_keys)),
+                            cmd!(SUDO, CP, LOC_BASHRC_USER, LOC_HG_VAR_TMP), 
+                            cmd!(ARTIX_CHROOT, DIR_HG_ROOT, INSTALL, format!("{ARL_OWNER_IS}{ROOT}"), format!("{ARL_GROUP_IS}{ROOT}"), 
+                                ARG_MOD644, LOC_TMP_BASHRC, LOC_BASHRC_ROOT), 
+                            cmd!(ARTIX_CHROOT, DIR_HG_ROOT, INSTALL, format!("{ARL_OWNER_IS}{user}"), format!("{ARL_GROUP_IS}{user}"), 
+                                ARG_MOD644, LOC_TMP_BASHRC, format!("/home/{user}/.bashrc")), 
                             cmd!(ARTIX_CHROOT, DIR_HG_ROOT, USERMOD, ARG_P, &self.password_root, ROOT)
                         ])
                     }
@@ -151,23 +154,25 @@ impl CommandRun for ChrootUsermod {
 }
 
 
-pub struct CleanupInstall {
-    init: String
-}
+pub struct CleanupInstall {}
 
 impl CleanupInstall {
-    pub fn new(init: &str) -> CleanupInstall {
-        CleanupInstall {
-            init: init.into()
-        }
+    pub fn new() -> CleanupInstall {
+        CleanupInstall {}
     }
 }
 
 impl CommandRun for CleanupInstall {
     fn prepare(&self) -> TypeCommandRun {
         let mut deh_expr = CLEANUP_CMDS.iter().map(|e| 
-            cmd!(SUDO, RM, Path::new(&format!("{DIR_MNT}/{}", e)))).collect::<Vec<Expression>>();
-        deh_expr.push(cmd!(SUDO, RM, Path::new(&format!("{DIR_MNT}/{}-2024*", &self.init))));
+            cmd!(SUDO, RM, ARG_RF, Path::new(e))).collect::<Vec<Expression>>();
+        for entry in glob(format!("{DIR_MNT}/*.tar.xz").as_str()).expect("Failed to read glob pattern") {
+            match entry {
+                Ok(path) => deh_expr.push(cmd!(SUDO, RM, path)),
+                Err(_) => {},
+            }
+        }
+        deh_expr.push(cmd!(SUDO, RM, LOC_MAHRK_OTONOMI_EQSTALE));
         TypeCommandRun::Deh(deh_expr)
     }
 }
@@ -206,26 +211,44 @@ impl EqstalxEditor {
 
 impl CommandRun for EqstalxEditor {
     fn prepare(&self) -> TypeCommandRun {
-        let dir_nvim_guest = format!("{DIR_HG_ROOT}/home/{}/.config/nvim", &self.user);
-        let dir_nvim_host = "home/bas/.config/nvim";
-        let dir_keymaps_guest = format!("{}/keymaps", dir_nvim_guest);
-        let dir_keymaps_host = format!("{}/keymaps", dir_nvim_host);
-        let dir_keymap = format!("/home/bas/SE_Bastille/src/files/{}.lua", self.keymap);
+        let loc_config = format!("/home/{}/.config", &self.user);
+        let loc_nvim_guest = format!("{}/nvim", loc_config);
+        
+        let loc_keymap_guest = format!("{}/{}.lua", LOC_VAR_TMP, self.keymap);
+        let loc_keymap_host = format!("/home/bas/SE_Bastille/src/files/{}.lua", self.keymap);
+        let loc_keymaps_host = format!("{}/plugins/keymaps", LOC_NVIM_HOST);
+        let loc_keymaps_guest = format!("{}/plugins/keymaps", loc_nvim_guest);
 
-        let copy_nvim = cmd!(RSYNC, ARG_A, ARL_EXCLUDE, Path::new(&dir_keymaps_guest), 
-            Path::new(dir_nvim_host), Path::new(&dir_nvim_guest));
-
+        let mkdir_config = cmd!(ARTIX_CHROOT, DIR_HG_ROOT, INSTALL, ARL_DIR, 
+                    format!("{ARL_OWNER_IS}{}", &self.user), 
+                   format!("{ARL_GROUP_IS}{}", &self.user), ARG_MOD755, &loc_config);
+        let copy_host_nvim_tmp = cmd!(RSYNC, ARG_A, ARL_EXCLUDE, Path::new(&loc_keymaps_host),
+            Path::new(LOC_NVIM_HOST), Path::new(LOC_HG_VAR_TMP));
+        let copy_guest_tmp_nvim = cmd!(ARTIX_CHROOT, DIR_HG_ROOT, RSYNC, ARG_A,
+            format!("--chown={user}:{user}", user = &self.user), 
+            Path::new(LOC_TMP_NVIM), Path::new(&loc_nvim_guest));
+        let copy_host_keymap_tmp = cmd!(RSYNC, ARG_A, Path::new(&loc_keymap_host), Path::new(&LOC_HG_VAR_TMP));
+        let copy_guest_tmp_keymap = cmd!(ARTIX_CHROOT, DIR_HG_ROOT, RSYNC, ARG_A, 
+            format!("--chown={user}:{user}", user = &self.user), 
+            Path::new(&loc_keymap_guest), Path::new(&loc_keymaps_guest));
+ 
         match self.keymap.as_str() {
             "yr" =>
-                TypeCommandRun::Deh(vec![
-                    copy_nvim,
-                    cmd!(ARTIX_CHROOT, DIR_HG_ROOT, MKDIR, Path::new(&dir_keymaps_host)),
-                    cmd!(CP, Path::new(&dir_keymap), Path::new(&dir_keymaps_guest))
-                ]),
+            TypeCommandRun::Deh(vec![
+                mkdir_config,
+                copy_host_nvim_tmp, 
+                copy_guest_tmp_nvim,
+                copy_host_keymap_tmp,
+                copy_guest_tmp_keymap
+            ]),
             _ =>
-            TypeCommandRun::Syl(copy_nvim)
+            TypeCommandRun::Deh(vec![
+                mkdir_config,
+                copy_host_nvim_tmp,
+                copy_guest_tmp_nvim
+            ]),
         }
-    }
+   }
 }
 
 
@@ -495,7 +518,9 @@ impl CommandRun for Mount {
     }
 }
 
+/*
 pub struct MountDevPts {}
+
 
 impl MountDevPts {
     pub fn new() -> MountDevPts {
@@ -508,7 +533,7 @@ impl CommandRun for MountDevPts {
         TypeCommandRun::Syl(cmd!(SUDO, MOUNT, ARG_T, "devpts", "none", format!("{DIR_HG_ROOT}/dev/pts")))
     }
 }
-
+*/
 
 pub struct MountVolumeMain {
     pub filesystem: PathBuf,
@@ -586,13 +611,13 @@ pub struct Remove {
 
 impl Remove {
 
-    #[allow(dead_code)]
     pub fn new(path: &Path) -> Remove {
         Remove {
             path: path.into()
         }
     }
 
+    #[allow(dead_code)]
     pub fn chroot(path: &Path) -> Remove {
         Remove {
             path: Path::new(DIR_HG_ROOT).join(path)
@@ -672,12 +697,12 @@ impl CommandRun for SetSettingsSystem {
             cmd!(ARTIX_CHROOT, DIR_HG_ROOT, LN, ARG_S, ARG_F, format!("/usr/share/zoneinfo/timezone/{}/{}",
                 &self.timezone_uqkeh, &self.timezone_dykeh), "/etc/localtime"),
             cmd!(ARTIX_CHROOT, DIR_HG_ROOT, SED, ARG_I, format!("s/\"#{locale}\"/\"{locale}\"/g"), LOC_LOCALE_GEN),
-            cmd!(ARTIX_CHROOT, DIR_HG_ROOT, ECHO, format!("\"#LOCALE={locale}\"")).pipe(cmd!(TEE, ARG_A, LOC_LOCALE_CONF)),
+            cmd!(ARTIX_CHROOT, DIR_HG_ROOT, ECHO, format!("\"#LOCALE={locale}\"")).pipe(cmd!(SUDO, TEE, ARG_A, LOC_LOCALE_CONF)),
             cmd!(ARTIX_CHROOT, DIR_HG_ROOT, LOCALE_GEN),
             cmd!(ARTIX_CHROOT, DIR_HG_ROOT, ECHO, format!("\"KEYMAP={}\nFONT={DEFAULT_CONSOLEFONT}\"", 
-                &self.keymap)).pipe(cmd!(TEE, ARG_A, LOC_VCONSOLE_CONF)),
+                &self.keymap)).pipe(cmd!(SUDO, TEE, ARG_A, LOC_VCONSOLE_CONF)),
             cmd!(ARTIX_CHROOT, DIR_HG_ROOT, LOCALE_GEN),
-            cmd!(ARTIX_CHROOT, DIR_HG_ROOT, &self.name_host).pipe(cmd!(TEE, ARG_A, LOC_HOSTNAME))
+            cmd!(ARTIX_CHROOT, DIR_HG_ROOT, ECHO, &self.name_host).pipe(cmd!(SUDO, TEE, ARG_A, LOC_HOSTNAME))
         ])
     }
 }
@@ -709,13 +734,13 @@ pub struct Touch {
 
 impl Touch {
 
-    #[allow(dead_code)]
     pub fn new(path: &Path) -> Touch {
         Touch {
             path: path.into()
         }
     }
 
+    #[allow(dead_code)]
     pub fn chroot(path: &Path) -> Touch {
         Touch {
             path: Path::new(DIR_HG_ROOT).join(path)
@@ -806,6 +831,7 @@ impl CommandRun for UmountDrive {
 }
 
 pub struct OSIndexDownload {
+    a_href: Selector,
     os_build: String,
     path_dest: PathBuf,
     path_os: Rc<RefCell<PathBuf>>,
@@ -813,11 +839,12 @@ pub struct OSIndexDownload {
 }
 
 impl OSIndexDownload {
-    pub fn new(path_os: Rc<RefCell<PathBuf>>, os_build: &str, url_index: &str, path_dest: &Path) -> OSIndexDownload {
+    pub fn new(url_index: &str, os_build: &str, path_dest: PathBuf, path_os: Rc<RefCell<PathBuf>>) -> OSIndexDownload {
         OSIndexDownload {
-            path_os,
-            path_dest: path_dest.into(),
+            a_href: Selector::parse("a").unwrap(),
             os_build: os_build.into(),
+            path_dest: path_dest.into(),
+            path_os,
             url_index: String::from(url_index),
         }
     }
@@ -825,21 +852,46 @@ impl OSIndexDownload {
 
 impl CommandRun for OSIndexDownload {
     fn prepare(&self) -> TypeCommandRun {
+    let mut path_os: PathBuf;
 
         match reqwest::blocking::get(&self.url_index) {
             Ok(resp) => {
                 match resp.status().is_success() {
                     true => {
-                    let doc = Html::parse_document(resp.text().unwrap().as_str());
-                    info!("doc: {:?}", doc);
-                    info!("os_build: {:?}", self.os_build);
-                    self.path_os.borrow_mut().push(self.path_dest.clone());
-                    panic!("test");
-                    // match path.exists() {
-                    //    false => TypeCommandRun::Syl(cmd!(SUDO, WGET, ARG_Q, &self.url_index).dir(path)),
-                    //    true => TypeCommandRun::Kuq(),
-                    // }
-                    },
+                        path_os = self.path_dest.clone();
+                        let doc = Html::parse_document(resp.text().unwrap().as_str());
+                        let opt_os_link = doc.select(&self.a_href).into_iter().find(|s| {
+                            match s.value().attr(HREF) {
+                                Some(attr) => {
+                                    attr.starts_with(&self.os_build)  
+                                },
+                                #[allow(non_snake_case)]
+                                None => false,
+                            }
+                        });
+
+                        #[allow(non_snake_case)]
+                        match opt_os_link {
+                            Some(os_link) => {
+                                let opt_os_filename = os_link.value().attr(HREF);
+                                match opt_os_filename {
+                                    Some(os_filename) => {
+                                        path_os.push(os_filename);
+                                        self.path_os.borrow_mut().push(path_os.clone());
+                                        match path_os.exists() {
+                                            false => return TypeCommandRun::Syl(cmd!(SUDO, WGET, ARG_Q, 
+                                                    self.url_index.clone() + os_filename).dir(&self.path_dest)),
+                                            true => return TypeCommandRun::Kuq(),
+                                        }
+                                    },
+                                    None => {
+                                        panic!("No filename found");
+                                    },
+                                }
+                            },
+                            None => panic!("No link found"),
+                        }
+                   },
                     false => {
                         panic!("url not found: {}", &self.url_index);
                     },

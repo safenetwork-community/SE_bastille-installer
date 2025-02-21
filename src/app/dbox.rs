@@ -756,7 +756,7 @@ impl HandlerGauge for BoxGaugeInstallation {
         
         let dydeh_command = self.builder_list_command.get_dydeh_command();
         let c_total = dydeh_command.len();
-        
+       
         let c_start = match self.builder_list_command.get_markers_progress()
             .iter().find(|(file_marker, _)| file_marker.exists()) {
             Some((_, text_marker)) => {
@@ -767,7 +767,7 @@ impl HandlerGauge for BoxGaugeInstallation {
             }, 
             _ => 0,
         };
-
+        
         for (i, (text, deh_command)) in dydeh_command[c_start..].iter().enumerate() {
             let percent = i * 100 / c_total;
             BoxGauge::show(text.as_str(), percent as u8);
@@ -775,9 +775,9 @@ impl HandlerGauge for BoxGaugeInstallation {
 
             for (j, command_opt) in deh_command.iter().enumerate() {
                 match command_opt.prepare() {
-                    TypeCommandRun::Syl(command) => self.handle_command(command, i, j),
+                    TypeCommandRun::Syl(command) => self.handle_command(command, i + c_start, j),
                     TypeCommandRun::Deh(commands) => commands.iter().for_each(|command| {
-                        self.handle_command(command.into(), i, j);
+                        self.handle_command(command.into(), i + c_start, j);
                     }),
                     TypeCommandRun::Kuq() => {},
                     TypeCommandRun::Ehryr(page) => return page,

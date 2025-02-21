@@ -9,7 +9,7 @@ pub const DEFAULT_CONSOLEFONT: &str = "eurlatingr";
 pub const DEFAULT_EDITOR: &str = "lunarvim";
 pub const DEFAULT_INIT: &str = "dinit";
 pub const DEFAULT_PACKAGE_FS: &str = "btrfs-progs"; 
-pub const DEFAULT_PACKAGES: &[&str; 5] = &["cargo", "base-devel", "neovim", "kitty-terminfo", "trizen"]; 
+pub const DEFAULT_PACKAGES: &[&str; 6] = &["cargo", "base-devel", "neovim", "kitty-terminfo", "rsync", "trizen"]; 
 pub const DEFAULT_OS_ARCH: &str = "armtix";
 pub const DEFAULT_OS_BASE: &str = "Artix";
 pub const DEFAULT_OS_FLAVOR: &str = "Bastille OS";
@@ -57,7 +57,7 @@ pub const TXT_PACKAGE_FS: &str = concatcp!("Installing btrfs package", DOTS);
 pub const TXT_PACKAGES_INSTALL: &str = concatcp!("Installing packages", DOTS);
 pub const TXT_PACKAGES_AUR: &str = concatcp!("Installing AUR packages", DOTS);
 pub const TXT_PACKAGES_UPDATE: &str = concatcp!("Updating packages", DOTS);
-pub const TXT_REZOSUR: &str = formatcp!("Installing base server app {DEFAULT_OS_FLAVOR}{}", DOTS);
+pub const TXT_OTONOMI: &str = formatcp!("Installing base server app {DEFAULT_OS_FLAVOR}{}", DOTS);
 pub const TXT_SETTINGS_SYSTEM: &str = concatcp!("Setting up system settings", DOTS);
 pub const TXT_FSTAB: &str = concatcp!("Generating fstab", DOTS);
 pub const TXT_USERS: &str = concatcp!("Setting up users", DOTS);
@@ -103,31 +103,40 @@ pub const LABEL_ROOT_AND_HOME: &str = "BASTIJ_FUT";
 pub const DIR_HOME:  &str = "/home/bas";
 pub const DIR_USR_BIN: &str = "/usr/bin";
 
-// istallation locations
+// installation locations
 pub const LOC_BINFMT_AARCH64: &str = "/usr/lib/binfmt.d/qemu-aarch64-static.conf";
 pub const LOC_BINFMT_REGISTER: &str = "/proc/sys/fs/binfmt_misc/register";
+pub const LOC_DB_LOCK_PACMAN: &str = "/var/lib/pacman/db.lck";
 pub const LOC_DEFAULT_BINFMT_ARCH: &str = "/proc/sys/fs/binfmt_misc/qemu-aarch64";
 pub const LOC_HOSTNAME: &str = "/etc/hostname";
 pub const LOC_FSTAB: &str = "/etc/fstab";
-pub const LOC_PROFILE: &str = formatcp!("{DIR_HOME}/.profile");
+pub const LOC_BASHRC_USER: &str = formatcp!("{DIR_HOME}/.bashrc");
+pub const LOC_BASHRC_ROOT: &str = formatcp!("/{ROOT}/.bashrc");
 pub const LOC_LOCALE_CONF: &str = "/etc/locale.conf";
 pub const LOC_LOCALE_GEN: &str = "/etc/locale.gen";
 pub const LOC_MKINITCPIO_STS: &str = "/etc/mkinitcpio.d/linux-aarch64-lts.preset";
+pub const LOC_NVIM_HOST: &str = "/home/bas/.config/nvim";
 pub const LOC_QEMU_USER_STATIC: &str = formatcp!("{DIR_USR_BIN}/{FILE_QEMU_STATIC}");
+pub const LOC_VAR_TMP: &str = "/var/tmp";
 pub const LOC_VCONSOLE_CONF: &str = "/etc/vconsole.conf";
-pub const LOC_DB_LOCK_PACMAN: &str = "/var/lib/pacman/db.lck";
+
+// tmp locations
+pub const LOC_TMP_BASHRC: &str = formatcp!("{LOC_VAR_TMP}/.bashrc");
+pub const LOC_TMP_NVIM: &str = formatcp!("{LOC_VAR_TMP}/nvim");
 
 // file mark locations
-pub const LOC_MAHRK_IMAZJ_KOQSTRUE: &str = "mahrk_imazj_koqstrue";
-pub const LOC_MAHRK_IMAZJ_DATIZJE: &str = "mahrk_imazj_datizje";
-pub const LOC_MAHRK_PAKEHT_AUR_EQSTALE: &str = "mahrk_pakeht_aur_eqstale";
-pub const LOC_MAHRK_PAKEHT_PACMAN_EQSTALE: &str = "mahrk_pakeht_pacman_eqstale";
-pub const LOC_MAHRK_PAKEHT_FS_EQSTALE: &str = "mahrk_pakeht_fs_eqstale";
-pub const LOC_MAHRK_IMAZJ_FINI: &str = LOC_MAHRK_PAKEHT_FS_EQSTALE;
+pub const LOC_MAHRK_IMAZJ_DATIZJE: &str = formatcp!("{DIR_HG_ROOT}/mahrk_imazj_datizje");
+pub const LOC_MAHRK_IMAZJ_KOQSTRUE: &str = formatcp!("{DIR_HG_ROOT}/mahrk_imazj_koqstrue");
+pub const LOC_MAHRK_PAKEHT_AUR_EQSTALE: &str = formatcp!("{DIR_HG_ROOT}/mahrk_pakeht_aur_eqstale");
+pub const LOC_MAHRK_PAKEHT_FS_EQSTALE: &str = formatcp!("{DIR_HG_ROOT}/mahrk_pakeht_fs_eqstale");
+pub const LOC_MAHRK_PAKEHT_PACMAN_EQSTALE: &str = formatcp!("{DIR_HG_ROOT}/mahrk_pakeht_pacman_eqstale");
+pub const LOC_MAHRK_OTONOMI_EQSTALE: &str = formatcp!("{DIR_HG_ROOT}/mahrk_otonomi_eqstale");
 
 // Host -> Guest installation directories 
 pub const LOC_HG_QEMU_USER_STATIC: &str = formatcp!("{DIR_HG_ROOT}{DIR_USR_BIN}/{FILE_QEMU_STATIC}");
 pub const LOC_HG_FSTAB: &str = formatcp!("{DIR_HG_ROOT}{LOC_FSTAB}");
+pub const LOC_HG_VAR_TMP: &str = formatcp!("{DIR_HG_ROOT}{LOC_VAR_TMP}");
+
 
 // URLs
 pub const URL_ARMTIX_DL: &str = "https://armtixlinux.org/images/";

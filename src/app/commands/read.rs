@@ -110,7 +110,6 @@ impl CommandRead {
     pub fn drive_exists(drive: &Path) -> bool {
         let filter = format!(r#"{ARG_FILTER_NAME} '{}' {ARG_FILTER_TYPE_DISK}"#, drive.file_name().unwrap().to_str().unwrap());        
         let command = cmd!(LSBLK, ARG_DN, ARG_O, ACS_NAME, ARL_FILTER, filter);
-        info!("command: {:?}", command);
 
         match command.read() {
             Err(e) => panic!("{ERR_FAILED_EXECUTE}: {SUDO} {:?}\n{}", command, e),

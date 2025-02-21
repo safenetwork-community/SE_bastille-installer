@@ -36,7 +36,7 @@ pub const TOUCH: &str = "touch";
 pub const TRIZEN: &str = "trizen";
 pub const UMOUNT: &str = "umount";
 pub const USERMOD: &str = "usermod";
-// pub const WGET: &str = "wget";
+pub const WGET: &str = "wget";
 
 // General arguments
 /*
@@ -63,10 +63,9 @@ pub const ARG_N: &str = "-n";
 pub const ARG_NO: &str = "-no";
 pub const ARG_O: &str = "-o";
 pub const ARG_P: &str = "-p";
-// pub const ARG_Q: &str = "-q";
+pub const ARG_Q: &str = "-q";
 pub const ARG_RF: &str = "-rf";
 pub const ARG_S: &str = "-s";
-pub const ARG_T: &str = "-t";
 pub const ARG_U: &str = "-u";
 pub const ARG_XF: &str = "-xf";
 pub const ARGS_C: &str = "-C";
