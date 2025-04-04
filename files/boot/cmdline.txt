@@ -1,1 +1,1 @@
-pub const TXT_PACKAGES_AUR_INSTALL: &str = concatcp!("Installing AUR packages", DOTS);
+console=ttyS1,115200 earlyprintk=serial,ttyS1,115200 root=/dev/mmcblk1p2 rw rootwait smsc95xx.turbo_mode=N dwc_otg.lpm_enable=0
