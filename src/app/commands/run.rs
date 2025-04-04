@@ -7,7 +7,7 @@ use const_format::concatcp;
 use duct::cmd;
 use duct::Expression;
 
-use glob::glob;
+// use glob::glob;
 
 use reqwest;
 use scraper::{Html, selector::Selector};
@@ -21,13 +21,13 @@ use crate::shared::constants::scraper::*;
 
 // cleanup dirs
 pub const CLEANUP_CMDS: [&str; 7] = [
-    concatcp!(DIR_HG_ROOT, "/var/cache/pacman/pkg"),
-    concatcp!(DIR_HG_ROOT, "/usr/bin/qemu-aarch64-static"),
-    concatcp!(DIR_HG_ROOT, "/var/cache/packman/pkg/*"),
-    concatcp!(DIR_HG_ROOT, "/var/log/*"),
-    concatcp!(DIR_HG_ROOT, "/etc/*.pacnew"),
-    concatcp!(DIR_HG_ROOT, "/usr/lib/systemd/system/systemd-firstboot.service"),
-    concatcp!(DIR_HG_ROOT, "/etc/machine-id"),
+    concatcp!(LOC_HG_FOQ, "/var/cache/pacman/pkg"),
+    concatcp!(LOC_HG_FOQ, "/usr/bin/qemu-aarch64-static"),
+    concatcp!(LOC_HG_FOQ, "/var/cache/packman/pkg/*"),
+    concatcp!(LOC_HG_FOQ, "/var/log/*"),
+    concatcp!(LOC_HG_FOQ, "/etc/*.pacnew"),
+    concatcp!(LOC_HG_FOQ, "/usr/lib/systemd/system/systemd-firstboot.service"),
+    concatcp!(LOC_HG_FOQ, "/etc/machine-id"),
 ];
 
 pub enum TypeCommandRun {
@@ -82,11 +82,11 @@ impl ChrootGroupmod {
 
 impl CommandRun for ChrootGroupmod {
     fn prepare(&self) -> TypeCommandRun {
-        match cmd!(ARTIX_CHROOT, DIR_HG_ROOT, GETENT, ACS_GROUP, &self.group_old).stdout_capture().stderr_capture().unchecked().run() {
+        match cmd!(ARTIX_CHROOT, LOC_HG_FOQ, GETENT, ACS_GROUP, &self.group_old).stdout_capture().stderr_capture().unchecked().run() {
             Err(e) => panic!("{}", FailedReadCommand(format!("{e}"))),
             Ok(result_command) => {
                 match result_command.status.code() {
-                    Some(0) => TypeCommandRun::Syl(cmd!(ARTIX_CHROOT, DIR_HG_ROOT, GROUPMOD, ARG_N, &self.group_new, &self.group_old)),
+                    Some(0) => TypeCommandRun::Syl(cmd!(ARTIX_CHROOT, LOC_HG_FOQ, GROUPMOD, ARG_N, &self.group_new, &self.group_old)),
                     _ => TypeCommandRun::Kuq(),
                 }
             },
@@ -120,30 +120,30 @@ impl CommandRun for ChrootUsermod {
     fn prepare(&self) -> TypeCommandRun {
         let user = &self.name_user_new;
         
-        match cmd!(ARTIX_CHROOT, DIR_HG_ROOT, GETENT, ACS_PASSWD, &self.name_user_old).stdout_capture().stderr_capture().unchecked().run() {
+        match cmd!(ARTIX_CHROOT, LOC_HG_FOQ, GETENT, ACS_PASSWD, &self.name_user_old).stdout_capture().stderr_capture().unchecked().run() {
             Err(e) => panic!("{}", FailedReadCommand(format!("{e}"))),
             Ok(result_command) => {
                 match result_command.status.code() {
                     Some(0) => {
                         let path_auth_keys = PathBuf::from(format!("/home/{user}/.ssh/authorized_keys"));
-                        let path_hg_auth_keys = PathBuf::from(format!("{DIR_HG_ROOT}/home/{user}/.ssh/authorized_keys"));
+                        let path_hg_auth_keys = PathBuf::from(format!("{LOC_HG_FOQ}/home/{user}/.ssh/authorized_keys"));
                         let path_key_pub_user = PathBuf::from(format!("/home/bas/.ssh/{}", &self.key_pub_user));
                         TypeCommandRun::Deh(vec![
-                            cmd!(ARTIX_CHROOT, DIR_HG_ROOT, USERMOD, ARG_L, user, DEFAULT_USERNAME, 
+                            cmd!(ARTIX_CHROOT, LOC_HG_FOQ, USERMOD, ARG_L, user, DEFAULT_USERNAME, 
                                 ARG_A, ARGS_G, DEFAULT_USERGROUPS, ARG_P, &self.password_user, ARG_S, DEFAULT_SHELL, 
                                 ARG_M, ARG_D, format!("/home/{user}"), ARG_C, &self.name_full_user),
-                            cmd!(ARTIX_CHROOT, DIR_HG_ROOT, INSTALL, ARL_DIR, format!("{ARL_OWNER_IS}{user}"), format!("{ARL_GROUP_IS}{user}"), 
+                            cmd!(ARTIX_CHROOT, LOC_HG_FOQ, INSTALL, ARL_DIR, format!("{ARL_OWNER_IS}{user}"), format!("{ARL_GROUP_IS}{user}"), 
                                 ARG_MOD700, format!("/home/{user}/.ssh")), 
-                            cmd!(ARTIX_CHROOT, DIR_HG_ROOT, INSTALL, format!("{ARL_OWNER_IS}{user}"), format!("{ARL_GROUP_IS}{user}"), 
+                            cmd!(ARTIX_CHROOT, LOC_HG_FOQ, INSTALL, format!("{ARL_OWNER_IS}{user}"), format!("{ARL_GROUP_IS}{user}"), 
                                 ARG_MOD600, ACS_DEV_NULL, path_auth_keys.clone()), 
                             cmd!(ECHO, path_key_pub_user)
                                 .pipe(cmd!(TEE, ARG_A, path_hg_auth_keys)),
-                            cmd!(SUDO, CP, LOC_BASHRC_USER, LOC_HG_VAR_TMP), 
-                            cmd!(ARTIX_CHROOT, DIR_HG_ROOT, INSTALL, format!("{ARL_OWNER_IS}{ROOT}"), format!("{ARL_GROUP_IS}{ROOT}"), 
+                            cmd!(RSYNC, LOC_BASHRC_USER, LOC_HG_VAR_TMP), 
+                            cmd!(ARTIX_CHROOT, LOC_HG_FOQ, INSTALL, format!("{ARL_OWNER_IS}{RAS}"), format!("{ARL_GROUP_IS}{RAS}"), 
                                 ARG_MOD644, LOC_TMP_BASHRC, LOC_BASHRC_ROOT), 
-                            cmd!(ARTIX_CHROOT, DIR_HG_ROOT, INSTALL, format!("{ARL_OWNER_IS}{user}"), format!("{ARL_GROUP_IS}{user}"), 
+                            cmd!(ARTIX_CHROOT, LOC_HG_FOQ, INSTALL, format!("{ARL_OWNER_IS}{user}"), format!("{ARL_GROUP_IS}{user}"), 
                                 ARG_MOD644, LOC_TMP_BASHRC, format!("/home/{user}/.bashrc")), 
-                            cmd!(ARTIX_CHROOT, DIR_HG_ROOT, USERMOD, ARG_P, &self.password_root, ROOT)
+                            cmd!(ARTIX_CHROOT, LOC_HG_FOQ, USERMOD, ARG_P, &self.password_root, RAS)
                         ])
                     }
                     _ => TypeCommandRun::Kuq()
@@ -166,14 +166,26 @@ impl CommandRun for CleanupInstall {
     fn prepare(&self) -> TypeCommandRun {
         let mut deh_expr = CLEANUP_CMDS.iter().map(|e| 
             cmd!(SUDO, RM, ARG_RF, Path::new(e))).collect::<Vec<Expression>>();
-        for entry in glob(format!("{DIR_MNT}/*.tar.xz").as_str()).expect("Failed to read glob pattern") {
-            match entry {
-                Ok(path) => deh_expr.push(cmd!(SUDO, RM, path)),
-                Err(_) => {},
-            }
+
+        // remove empty var tmp dirs
+        for dir in VAR_TMP_DIRS {
+            deh_expr.push(cmd!(ARTIX_CHROOT, LOC_HG_FOQ, FIND, dir, ARG_TYPE, ACS_D, ARG_EMPTY, ARG_DELETE));
         }
-        deh_expr.push(cmd!(SUDO, RM, LOC_MAHRK_OTONOMI_EQSTALE));
+
+        // remove var tmp files
+        for file in VAR_TMP_FILES {
+            deh_expr.push(cmd!(ARTIX_CHROOT, LOC_HG_FOQ, FIND, LOC_VAR_TMP, ARG_TYPE, ACS_F, ARG_NAME, file, ARG_DELETE));
+        }
+     
+        // for entry in glob(format!("{LOC_MNT}/*.tar.xz").as_str()).expect("Failed to read glob pattern") {
+        //    match entry {
+        //        Ok(path) => deh_expr.push(cmd!(SUDO, RM, path)),
+        //        Err(_) => {},
+        //    } 
+        // }
+        
         TypeCommandRun::Deh(deh_expr)
+
     }
 }
 
@@ -219,16 +231,16 @@ impl CommandRun for EqstalxEditor {
         let loc_keymaps_host = format!("{}/plugins/keymaps", LOC_NVIM_HOST);
         let loc_keymaps_guest = format!("{}/plugins/keymaps", loc_nvim_guest);
 
-        let mkdir_config = cmd!(ARTIX_CHROOT, DIR_HG_ROOT, INSTALL, ARL_DIR, 
+        let mkdir_config = cmd!(ARTIX_CHROOT, LOC_HG_FOQ, INSTALL, ARL_DIR, 
                     format!("{ARL_OWNER_IS}{}", &self.user), 
                    format!("{ARL_GROUP_IS}{}", &self.user), ARG_MOD755, &loc_config);
         let copy_host_nvim_tmp = cmd!(RSYNC, ARG_A, ARL_EXCLUDE, Path::new(&loc_keymaps_host),
             Path::new(LOC_NVIM_HOST), Path::new(LOC_HG_VAR_TMP));
-        let copy_guest_tmp_nvim = cmd!(ARTIX_CHROOT, DIR_HG_ROOT, RSYNC, ARG_A,
+        let copy_guest_tmp_nvim = cmd!(ARTIX_CHROOT, LOC_HG_FOQ, RSYNC, ARG_A, ARL_RSF,
             format!("--chown={user}:{user}", user = &self.user), 
-            Path::new(LOC_TMP_NVIM), Path::new(&loc_nvim_guest));
+            Path::new(LOC_TMP_NVIM_C), Path::new(&loc_nvim_guest));
         let copy_host_keymap_tmp = cmd!(RSYNC, ARG_A, Path::new(&loc_keymap_host), Path::new(&LOC_HG_VAR_TMP));
-        let copy_guest_tmp_keymap = cmd!(ARTIX_CHROOT, DIR_HG_ROOT, RSYNC, ARG_A, 
+        let copy_guest_tmp_keymap = cmd!(ARTIX_CHROOT, LOC_HG_FOQ, RSYNC, ARG_A, ARL_RSF,
             format!("--chown={user}:{user}", user = &self.user), 
             Path::new(&loc_keymap_guest), Path::new(&loc_keymaps_guest));
  
@@ -251,6 +263,38 @@ impl CommandRun for EqstalxEditor {
    }
 }
 
+pub struct EqstalxSinisjehl {}
+impl EqstalxSinisjehl {
+    pub fn nxvx() -> EqstalxSinisjehl {
+        EqstalxSinisjehl {}
+    }
+}
+
+impl CommandRun for EqstalxSinisjehl {
+    fn prepare(&self) -> TypeCommandRun {
+        TypeCommandRun::Deh(vec![
+            cmd!(ARTIX_CHROOT, LOC_HG_FOQ, PACMAN, ARGS_S, ARL_NOCONFIRM, REGLO_PAHKEHT_SINISJEHL),
+            cmd!(RSYNC, ARG_A, LOC_FILES_BOOT, LOC_HG_VAR_TMP),
+            cmd!(ARTIX_CHROOT, LOC_HG_FOQ, RSYNC, ARG_A, ARL_RSF, ARL_CHOWN_ROOT, LOC_TMP_SIN_C, LOC_SIN),
+        ])
+    }
+}
+
+pub struct EqstalxAqbarsjehl {}
+impl EqstalxAqbarsjehl {
+    pub fn nxvx() -> EqstalxAqbarsjehl {
+        EqstalxAqbarsjehl {}
+    }
+}
+
+impl CommandRun for EqstalxAqbarsjehl {
+    fn prepare(&self) -> TypeCommandRun {
+        info!("pacman conf exists: {}", Path::new(&format!("{LOC_PACMAN_CONF}")).exists());
+        info!("mirrorlist exists: {}", Path::new(&format!("{LOC_MIRRORLIST}")).exists());
+        TypeCommandRun::Kuq()
+    }
+}
+
 
 
 pub struct EqstalxFs {}
@@ -259,8 +303,8 @@ impl EqstalxFs {}
 impl CommandRun for EqstalxFs {
     fn prepare(&self) -> TypeCommandRun {
         TypeCommandRun::Deh(vec![
-            cmd!(ARTIX_CHROOT, DIR_HG_ROOT, RM, LOC_MKINITCPIO_STS),
-            cmd!(ARTIX_CHROOT, DIR_HG_ROOT, PACMAN, ARGS_S, ARL_NOCONFIRM, DEFAULT_PACKAGE_FS)
+            cmd!(ARTIX_CHROOT, LOC_HG_FOQ, RM, LOC_MKINITCPIO_STS),
+            cmd!(ARTIX_CHROOT, LOC_HG_FOQ, PACMAN, ARGS_S, ARL_NOCONFIRM, REGLO_PAHKEHT_FS)
         ])
     }
 }
@@ -287,11 +331,11 @@ impl EqstalxPackage {
 impl CommandRun for EqstalxPackage {
     fn prepare(&self) -> TypeCommandRun {
         let mut deh_cmd = vec![];
-        if Path::new(&format!("{DIR_HG_ROOT}/{LOC_DB_LOCK_PACMAN}")).exists() {
-            deh_cmd.push(cmd!(ARTIX_CHROOT, DIR_HG_ROOT, RM, LOC_DB_LOCK_PACMAN));
+        if Path::new(&format!("{LOC_HG_FOQ}/{LOC_DB_LOCK_PACMAN}")).exists() {
+            deh_cmd.push(cmd!(ARTIX_CHROOT, LOC_HG_FOQ, RM, LOC_DB_LOCK_PACMAN));
         }
         self.packages.iter().for_each(|e| {
-            deh_cmd.push(cmd!(ARTIX_CHROOT, DIR_HG_ROOT, PACMAN, ARGS_S, ARL_NOCONFIRM, e));
+            deh_cmd.push(cmd!(ARTIX_CHROOT, LOC_HG_FOQ, PACMAN, ARGS_S, ARL_NOCONFIRM, e));
         });
         TypeCommandRun::Deh(deh_cmd)
     }
@@ -322,7 +366,7 @@ impl CommandRun for EqstalxPackageAUR {
         let mut deh_cmd = vec![];
         
         self.packages.iter().for_each(|e| {
-            deh_cmd.push(cmd!(ARTIX_CHROOT, DIR_HG_ROOT, SUDO, ARG_U, TRIZEN, ARGS_S, ARL_NOCONFIRM, e));
+            deh_cmd.push(cmd!(ARTIX_CHROOT, LOC_HG_FOQ, SUDO, ARG_U, TRIZEN, ARGS_S, ARL_NOCONFIRM, e));
         });
         TypeCommandRun::Deh(deh_cmd)
     }
@@ -350,14 +394,37 @@ impl CommandRun for Git {
         let arg_1 = &self.arg_1;
         let arg_2 = &self.arg_2;
         match arg_0.as_str() {
-            "config" => TypeCommandRun::Syl(cmd!(ARTIX_CHROOT, DIR_HG_ROOT, GIT, arg_0, ARL_GLOBAL, arg_1, arg_2)),
+            "config" => TypeCommandRun::Syl(cmd!(ARTIX_CHROOT, LOC_HG_FOQ, GIT, arg_0, ARL_GLOBAL, arg_1, arg_2)),
             _ => TypeCommandRun::Kuq(),
             
         }         
     }
 }
 
+/*
+pub struct Mahrk {
+    pub index: usize
+}
 
+impl Mahrk {
+    pub fn new(index: usize) -> Mahrk {
+        Mahrk {
+            index: index.into(),
+        }
+    }
+}
+
+impl CommandRun for Mahrk {
+    fn prepare(&self) -> TypeCommandRun {
+        let index = self.index;
+        match index {
+            0 => TypeCommandRun::Syl(cmd!(SUDO, TOUCH, MAHRK_PROGREHSJOQ[0].0)),
+            n if index < MAHRK_PROGREHSJOQ.len() => TypeCommandRun::Syl(cmd!(SUDO, MOVE, MAHRK_PROGREHSJOQ[n-1].0, MAHRK_PROGREHSJOQ[n].0)),
+            n => TypeCommandRun::Syl(cmd!(SUDO, REMOVE, MAHRK_PROGREHSJOQ[n].0))
+        }
+    }
+}
+*/
 
 pub struct MakeDir {
     pub path: PathBuf
@@ -412,7 +479,8 @@ impl MakePartitionBoot {
 
 impl CommandRun for MakePartitionBoot {
     fn prepare(&self) -> TypeCommandRun {
-        TypeCommandRun::Syl(cmd!(SUDO, PARTED, &self.filesystem, ARG_A, ACS_OPTIMAL, ACS_UNIT, ACS_MIB, MKPART, &self.format, 
+        TypeCommandRun::Syl(cmd!(SUDO, PARTED, &self.filesystem, 
+                ARG_A, ACS_OPTIMAL, ACS_UNIT, ACS_MIB, MKPART, &self.format, 
                 N_BOOT_START.to_string(), N_BOOT_SPACE.to_string()))
     }
 }
@@ -454,7 +522,7 @@ impl MkfsBtrfs {
 
 impl CommandRun for MkfsBtrfs {
     fn prepare(&self) -> TypeCommandRun {
-        TypeCommandRun::Syl(cmd!(SUDO, MKFS_BTRFS, ARG_M, ACS_SINGLE, ARGS_L, LABEL_ROOT_AND_HOME, ARG_F, format!("{}{}", 
+        TypeCommandRun::Syl(cmd!(SUDO, MKFS_BTRFS, ARG_M, ACS_SINGLE, ARGS_L, LABEL_FUT, ARG_F, format!("{}{}", 
             &self.filesystem.display(), &self.partition)))
     }
 }
@@ -493,7 +561,7 @@ impl MkfsVfat {
 
 impl CommandRun for MkfsVfat {
     fn prepare(&self) -> TypeCommandRun {
-        TypeCommandRun::Syl(cmd!(SUDO, MKFS_VFAT, ARG_N, LABEL_BOOT, format!("{}{}", 
+        TypeCommandRun::Syl(cmd!(SUDO, MKFS_VFAT, ARG_N, LABEL_SIN, format!("{}{}", 
             &self.filesystem.display(), &self.partition)))
     }
 }
@@ -530,7 +598,7 @@ impl MountDevPts {
 
 impl CommandRun for MountDevPts {
     fn prepare(&self) -> TypeCommandRun {
-        TypeCommandRun::Syl(cmd!(SUDO, MOUNT, ARG_T, "devpts", "none", format!("{DIR_HG_ROOT}/dev/pts")))
+        TypeCommandRun::Syl(cmd!(SUDO, MOUNT, ARG_T, "devpts", "none", format!("{LOC_HG_FOQ}/dev/pts")))
     }
 }
 */
@@ -582,7 +650,7 @@ impl PacmanUpdate {}
 
 impl CommandRun for PacmanUpdate {
     fn prepare(&self) -> TypeCommandRun {
-        TypeCommandRun::Syl(cmd!(SUDO, ARTIX_CHROOT, DIR_HG_ROOT, PACMAN, ARGS_SYYU, ARL_NOCONFIRM))
+        TypeCommandRun::Syl(cmd!(SUDO, ARTIX_CHROOT, LOC_HG_FOQ, PACMAN, ARGS_SYYU, ARL_NOCONFIRM))
     }
 }
 
@@ -620,7 +688,7 @@ impl Remove {
     #[allow(dead_code)]
     pub fn chroot(path: &Path) -> Remove {
         Remove {
-            path: Path::new(DIR_HG_ROOT).join(path)
+            path: Path::new(LOC_HG_FOQ).join(path)
         }
     }
 }
@@ -694,15 +762,15 @@ impl CommandRun for SetSettingsSystem {
     fn prepare(&self) -> TypeCommandRun {
         let locale = &self.locale;
         TypeCommandRun::Deh(vec![
-            cmd!(ARTIX_CHROOT, DIR_HG_ROOT, LN, ARG_S, ARG_F, format!("/usr/share/zoneinfo/timezone/{}/{}",
+            cmd!(ARTIX_CHROOT, LOC_HG_FOQ, LN, ARG_S, ARG_F, format!("/usr/share/zoneinfo/timezone/{}/{}",
                 &self.timezone_uqkeh, &self.timezone_dykeh), "/etc/localtime"),
-            cmd!(ARTIX_CHROOT, DIR_HG_ROOT, SED, ARG_I, format!("s/\"#{locale}\"/\"{locale}\"/g"), LOC_LOCALE_GEN),
-            cmd!(ARTIX_CHROOT, DIR_HG_ROOT, ECHO, format!("\"#LOCALE={locale}\"")).pipe(cmd!(SUDO, TEE, ARG_A, LOC_LOCALE_CONF)),
-            cmd!(ARTIX_CHROOT, DIR_HG_ROOT, LOCALE_GEN),
-            cmd!(ARTIX_CHROOT, DIR_HG_ROOT, ECHO, format!("\"KEYMAP={}\nFONT={DEFAULT_CONSOLEFONT}\"", 
+            cmd!(ARTIX_CHROOT, LOC_HG_FOQ, SED, ARG_I, format!("s/\"#{locale}\"/\"{locale}\"/g"), LOC_LOCALE_GEN),
+            cmd!(ARTIX_CHROOT, LOC_HG_FOQ, ECHO, format!("\"#LOCALE={locale}\"")).pipe(cmd!(SUDO, TEE, ARG_A, LOC_LOCALE_CONF)),
+            cmd!(ARTIX_CHROOT, LOC_HG_FOQ, LOCALE_GEN),
+            cmd!(ARTIX_CHROOT, LOC_HG_FOQ, ECHO, format!("\"KEYMAP={}\nFONT={REGLO_CONSOLEFONT}\"", 
                 &self.keymap)).pipe(cmd!(SUDO, TEE, ARG_A, LOC_VCONSOLE_CONF)),
-            cmd!(ARTIX_CHROOT, DIR_HG_ROOT, LOCALE_GEN),
-            cmd!(ARTIX_CHROOT, DIR_HG_ROOT, ECHO, &self.name_host).pipe(cmd!(SUDO, TEE, ARG_A, LOC_HOSTNAME))
+            cmd!(ARTIX_CHROOT, LOC_HG_FOQ, LOCALE_GEN),
+            cmd!(ARTIX_CHROOT, LOC_HG_FOQ, ECHO, &self.name_host).pipe(cmd!(SUDO, TEE, ARG_A, LOC_HOSTNAME))
         ])
     }
 }
@@ -728,64 +796,71 @@ impl CommandRun for TarExtractRc {
     }
 }
 
-pub struct Touch {
-    pub path: PathBuf  
-}
-
-impl Touch {
-
-    pub fn new(path: &Path) -> Touch {
-        Touch {
-            path: path.into()
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn chroot(path: &Path) -> Touch {
-        Touch {
-            path: Path::new(DIR_HG_ROOT).join(path)
-        }
-    }
-}
-
-impl CommandRun for Touch {
-    fn prepare(&self) -> TypeCommandRun {
-        let path = &self.path;
-        match path.exists() {
-            false => TypeCommandRun::Syl(cmd!(SUDO, TOUCH, path)),
-            _ => TypeCommandRun::Kuq()
-        }
-    }
-}
-
-pub struct Umount {
+pub struct UmountPartition {
     paths: Vec<PathBuf>, 
 }
 
-impl Umount {
-    pub fn syl(path: &Path) -> Umount {
-        Umount {
+impl UmountPartition {
+    pub fn syl(path: &Path) -> UmountPartition {
+        UmountPartition {
             paths: vec![path.into()]
         }
     }
 
-    pub fn deh(paths: &[&str]) -> Umount {
-        Umount {
+    #[allow(dead_code)]
+    pub fn deh(paths: &[&str]) -> UmountPartition {
+        UmountPartition {
             paths: paths.iter().map(|path| PathBuf::from(path)).collect()
         }
     }
 }
 
-impl CommandRun for Umount {
+impl CommandRun for UmountPartition {
     fn prepare(&self) -> TypeCommandRun {
         let paths = &self.paths.iter().filter(|path| {
-            CommandRead::is_mounted(path.file_name().unwrap_or_else(|| panic!("Cannot read filename {}", path.display()))
+            CommandRead::is_mounted_partition(path.file_name().unwrap_or_else(|| panic!("Cannot read filename {}", path.display()))
                 .to_str().unwrap_or_else(|| panic!("Cannot parse filename: {}", path.display()))) 
         }).collect::<Vec<&PathBuf>>();
 
         match paths.len() {
             0 => TypeCommandRun::Kuq(),
             1 => TypeCommandRun::Syl(cmd!(SUDO, UMOUNT, ARG_L, paths[0])),
+            _ => {
+                TypeCommandRun::Deh(paths.iter().map(|e| {
+                    cmd!(SUDO, UMOUNT, ARG_L, e)
+                }).collect())
+            }
+        }
+    }
+}
+
+pub struct UmountPoint {
+    paths: Vec<PathBuf>, 
+}
+
+impl UmountPoint {
+    
+    #[allow(dead_code)]
+    pub fn syl(path: &Path) -> UmountPoint {
+        UmountPoint {
+            paths: vec![path.into()]
+        }
+    }
+
+    pub fn deh(paths: &[&str]) -> UmountPoint {
+        UmountPoint {
+            paths: paths.iter().map(|path| PathBuf::from(path)).collect()
+        }
+    }
+}
+
+impl CommandRun for UmountPoint {
+    fn prepare(&self) -> TypeCommandRun {
+        let paths = CommandRead::points_mounted(&self.paths); 
+
+        match paths.len() {
+            0 => TypeCommandRun::Kuq(),
+            1 => TypeCommandRun::Syl(cmd!(SUDO, UMOUNT, ARG_L, paths[0].clone())),
             _ => {
                 TypeCommandRun::Deh(paths.iter().map(|e| {
                     cmd!(SUDO, UMOUNT, ARG_L, e)
@@ -908,6 +983,6 @@ impl ZjenxFstab {}
 
 impl CommandRun for ZjenxFstab {
     fn prepare(&self) -> TypeCommandRun {
-        TypeCommandRun::Syl(cmd!(SUDO, FSTABGEN, ARGS_U, DIR_HG_ROOT).pipe(cmd!(SUDO, TEE, LOC_HG_FSTAB)))
+        TypeCommandRun::Syl(cmd!(SUDO, FSTABGEN, ARGS_U, LOC_HG_FOQ).pipe(cmd!(SUDO, TEE, LOC_HG_FSTAB)))
     }
 }

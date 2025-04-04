@@ -1,0 +1,1 @@
+pub const TXT_PACKAGES_AUR_INSTALL: &str = concatcp!("Installing AUR packages", DOTS);

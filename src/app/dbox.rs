@@ -2,6 +2,7 @@ mod text;
 pub mod ebox;
 pub mod r#type;
 
+use duct::cmd;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use std::thread::sleep;
@@ -17,10 +18,11 @@ use super::dbox::text::*;
 use super::dbox::r#type::*;
 use super::install::ListCommand;
 
+use crate::shared::constants::command::{MOVE, TOUCH, REMOVE, SUDO};
 use crate::shared::constants::dbox::*;
 use crate::shared::constants::error::ErrorInstaller::{ErrorRunCommand, FailedRunCommand};
 use crate::shared::constants::string::EMPTY;
-
+use crate::shared::constants::install::{MAHRK_PROGREHSJOQ, TXT_CLEANUP_INSTALL};
 
 pub struct BoxMenuMain<'a> {
     pub msg_error: &'a mut String,
@@ -731,7 +733,7 @@ impl BoxGaugeInstallation {
     fn handle_command(&self, command: Expression, i: usize, j: usize) {
         match command.stdout_capture().stderr_capture().unchecked().run() {
             Ok(result_command) => {
-                debug!("{}.{}, display_command: {:?}", i, j, command);
+                info!("{}.{}, display_command: {:?}", i, j, command);
                 match result_command.status.success() {
                     true => {},
                     false => {
@@ -749,23 +751,42 @@ impl BoxGaugeInstallation {
         }
 
     }
+
+    fn get_next_mahrk_text(&self, index: usize) -> String {
+        let len = MAHRK_PROGREHSJOQ.len();
+        match index {
+            n if n < len => String::from(MAHRK_PROGREHSJOQ[n].1),
+            n if n == len => String::from(TXT_CLEANUP_INSTALL),
+            _ => String::new(),
+        }
+    }
 }
 
 impl HandlerGauge for BoxGaugeInstallation {
     fn handle(&mut self) -> Page {
         
+        let len_mahrk = MAHRK_PROGREHSJOQ.len();
         let dydeh_command = self.builder_list_command.get_dydeh_command();
         let c_total = dydeh_command.len();
-       
-        let c_start = match self.builder_list_command.get_markers_progress()
-            .iter().find(|(file_marker, _)| file_marker.exists()) {
-            Some((_, text_marker)) => {
-                match dydeh_command.iter().position(|(text_progress, _)| text_progress == text_marker) {
+
+        // installation progress indicators
+        let mut index_mahrk = match MAHRK_PROGREHSJOQ.iter()
+            .position(|(file, _)| Path::new(file).exists()) { 
+            #[allow(non_snake_case)]
+            None => 0,
+            Some(i) => i+1, 
+        };
+        let mut text_mahrk_next = self.get_next_mahrk_text(index_mahrk);
+
+        // resume installation indicator
+        let c_start = match index_mahrk {
+            0 => 0,
+            _ => {
+                match dydeh_command.iter().position(|(text_progress, _)| text_progress == MAHRK_PROGREHSJOQ[index_mahrk-1].1) {
                     Some(p) => p+1,
                     _ => 0,
                 }
-            }, 
-            _ => 0,
+            },
         };
         
         for (i, (text, deh_command)) in dydeh_command[c_start..].iter().enumerate() {
@@ -782,6 +803,18 @@ impl HandlerGauge for BoxGaugeInstallation {
                     TypeCommandRun::Kuq() => {},
                     TypeCommandRun::Ehryr(page) => return page,
                 }
+            }
+            if *text == text_mahrk_next {
+                // Volgende markeerteken
+                let command_mahrk = match index_mahrk {
+                    0 => cmd!(SUDO, TOUCH, MAHRK_PROGREHSJOQ[0].0),
+                    n if index_mahrk < len_mahrk => cmd!(SUDO, MOVE, MAHRK_PROGREHSJOQ[n-1].0, MAHRK_PROGREHSJOQ[n].0),
+                    n if index_mahrk == len_mahrk => cmd!(SUDO, REMOVE, MAHRK_PROGREHSJOQ[n-1].0),
+                    _ => panic!("Marker index out of bounds."),
+                };
+                self.handle_command(command_mahrk, i + c_start, deh_command.len());
+                index_mahrk += 1;
+                text_mahrk_next = self.get_next_mahrk_text(index_mahrk);
             }
         }
         Page::Finish

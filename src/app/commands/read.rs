@@ -1,10 +1,11 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use const_format::formatcp;
 use duct::cmd;
 
 use crate::app::dbox::r#type::Page;
 use crate::shared::constants::command::*;
+use crate::shared::constants::install::LOC_HG_FOQ;
 use crate::shared::constants::string::EMPTY;
 
 // find regex
@@ -21,14 +22,18 @@ pub const PATH_BKEYMAP: &str = "/usr/share/bkeymaps";
 pub const PATH_ZONEINFO: &str = "/usr/share/zoneinfo";  
 
 // Scols-filter arguments
-const ARG_FILTER_MOUNTED: &str = r#"MOUNTPOINT =~ '..*'"#;
+const ARG_FILTER_MOUNTED: &str = formatcp!("{ARG_FILTER_MPTS} '..*'");
+const ARG_FILTER_MPTS: &str = r#"MOUNTPOINTS =~ "#;
 const ARG_FILTER_NAME: &str = r#"NAME =~"#;
-const ARG_FILTER_TYPE_DISK: &str = formatcp!("&& TYPE =~ '{ACS_DISK}'");
-const ARG_FILTER_TYPE_PART: &str = formatcp!("&& TYPE =~ '{ACS_PART}'");
-const ARG_FILTER_E_PTS_MTD: &str = formatcp!("{ARG_FILTER_TYPE_PART} && {ARG_FILTER_MOUNTED}");
+const ARG_FILTER_TYPE_DISK: &str = formatcp!("TYPE =~ '{ACS_DISK}'");
+const ARG_FILTER_TYPE_PART: &str = formatcp!("TYPE =~ '{ACS_PART}'");
+const ARG_FILTER_E_PTS_MTD: &str = formatcp!("{LOP_AND} {ARG_FILTER_TYPE_PART} {LOP_AND} {ARG_FILTER_MOUNTED}");
+const ARG_FILTER_E_PTS_MPTS: &str = formatcp!("{ARG_FILTER_TYPE_PART} {LOP_AND}");
+const ACS_FILTER_OR_MPTS: &str = formatcp!(" {LOP_OR} {ARG_FILTER_MPTS}");
 
 const ACS_NAME: &str = "NAME";
-const ARG_NAME_MPT: &str = "name,mountpoint";
+const ACS_MPTS: &str = "mountpoints";
+const ACS_NAME_MPTS: &str = formatcp!("name,{ACS_MPTS}");
 
 // General programs
 const SED: &str = "sed";
@@ -66,6 +71,16 @@ pub const LIST_MENU_CONFIG: &[(&str, Page)] = &[
 pub struct CommandRead {}
 
 impl CommandRead {
+
+    #[allow(dead_code)]
+    pub fn cat(dir: &str) -> String {
+        let command = cmd!(ARTIX_CHROOT, LOC_HG_FOQ, CAT, dir); 
+        
+        match command.read() {
+            Ok(s) => s,
+            Err(e) => panic!("{ERR_FAILED_EXECUTE}: {:?}\n{e}", command),
+        }
+    }
 
     pub fn mountpoints_drive(drive: &Path) -> Result<String, std::io::Error> {
         let filter = format!(r#"{ARG_FILTER_NAME} '{}' {ARG_FILTER_E_PTS_MTD}"#, 
@@ -108,7 +123,7 @@ impl CommandRead {
     }
 
     pub fn drive_exists(drive: &Path) -> bool {
-        let filter = format!(r#"{ARG_FILTER_NAME} '{}' {ARG_FILTER_TYPE_DISK}"#, drive.file_name().unwrap().to_str().unwrap());        
+        let filter = format!(r#"{ARG_FILTER_NAME} '{}' {LOP_AND} {ARG_FILTER_TYPE_DISK}"#, drive.file_name().unwrap().to_str().unwrap());        
         let command = cmd!(LSBLK, ARG_DN, ARG_O, ACS_NAME, ARL_FILTER, filter);
 
         match command.read() {
@@ -133,9 +148,9 @@ impl CommandRead {
             REGEX_FIND_DIRS_ALL, SED_FIND_DEFAULT)
     }
 
-    pub fn is_mounted(drive: &str) -> bool {
+    pub fn is_mounted_partition(drive: &str) -> bool {
         let filter = format!(r#"{ARG_FILTER_NAME} '{}' {ARG_FILTER_E_PTS_MTD}"#, drive);
-        let command = cmd!(LSBLK, ARG_NO, ARG_NAME_MPT, ARG_LP, ARL_FILTER, filter);
+        let command = cmd!(LSBLK, ARG_NO, ACS_NAME_MPTS, ARG_LP, ARL_FILTER, filter);
 
         match command.read() {
             Err(e) => panic!("{ERR_FAILED_EXECUTE}: {SUDO} {:?}\n{}", command, e),
@@ -146,6 +161,30 @@ impl CommandRead {
                     integer => panic!("{ERR_FAILED_EXECUTE}: {SUDO} {:?}\n{ERR_OUT_OF_BOUNDS}: Max results: 1, Found {}\n{}", command, integer, s),
                 }
             },
+        }
+    }
+
+    pub fn points_mounted(mountpoints: &Vec<PathBuf>) -> Vec<PathBuf> {
+        if mountpoints.len() == 0 {
+            return vec![]
+        }
+
+        let mpts = mountpoints.iter().skip(1).fold(
+            format!("{ARG_FILTER_MPTS}'{}'", mountpoints[0].display()), |acc, x| {
+            format!("{acc}{ACS_FILTER_OR_MPTS}'{}'", x.display())
+        });
+        let filter = format!(r#"{ARG_FILTER_E_PTS_MPTS} ({})"#, mpts);
+        let command = cmd!(LSBLK, ARG_NO, ACS_MPTS, ARG_LP, ARL_FILTER, filter);
+                
+        match command.stderr_capture().unchecked().read() {
+            Ok(s) => {
+                let mut list: Vec<PathBuf> = Vec::new(); 
+                for line in s.lines() {
+                    list.push(PathBuf::from(line));  
+                }
+                list
+            },
+            Err(e) => panic!("{ERR_FAILED_EXECUTE}: {:?}\n{e}", command),
         }
     }
 

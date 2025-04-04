@@ -1,0 +1,5 @@
+enable_uart=1
+arm_64bit=1
+kernel=/Image
+initramfs /initramfs-linux.img followkernel
+device-tree=/dtbs/broadcom/bcm2711-rpi-4-b.dtb
