@@ -2,6 +2,7 @@ use const_format::formatcp;
 
 // General commands
 pub const ARTIX_CHROOT: &str = "artix-chroot";
+pub const AWK: &str = "awk";
 // pub const BASH: &str = "bash";
 pub const BTRFS: &str = "btrfs";
 pub const CAT: &str = "cat";
@@ -100,6 +101,7 @@ pub const ACS_D: &str = "d";
 pub const ACS_COUNT_32: &str = "count=32";
 pub const ACS_DEV_NULL: &str = "/dev/null";
 pub const ACS_DISK: &str = "disk";
+pub const ACS_ESP: &str = "esp";
 pub const ACS_F: &str = "f";
 pub const ACS_GPT: &str = "gpt";
 pub const ACS_GROUP: &str = "group";
@@ -107,14 +109,19 @@ pub const ACS_IF_DEV_ZERO: &str = "if=/dev/zero";
 pub const ACS_MAIN_VOL_COMPRESS: &str = "compress=zstd";
 pub const ACS_MIB: &str = "MiB";
 pub const ACS_MOUNTPOINTS: &str = "mountpoints";
+pub const ACS_ON: &str = "on";
 pub const ACS_OPTIMAL: &str = "optimal";
 pub const ACS_PART: &str = "part";
 pub const ACS_PASSWD: &str = "passwd";
-pub const ACS_STATUS_NONE: &str = "status=none";
+pub const ACS_SET: &str = "set";
 pub const ACS_SINGLE: &str = "single";
+pub const ACS_STATUS_NONE: &str = "status=none";
 pub const ACS_SU: &str = "su";
 pub const ACS_SUB_VOL_COMPRESS: &str = formatcp!("{ACS_MAIN_VOL_COMPRESS},subvol=");
 pub const ACS_UNIT: &str = "unit";
+pub const ACS_ONE_GT_DEVNULL: &str = "1>/dev/null";
+pub const ACS_TWO_GT_AMP_ONE: &str = "2>&1";
+pub const ACS_DEKOQMAQTX_ALARM: &str = "'$0==\"#[alarm]\"{c=2} c&&c--{sub(/#/,\"\")} 1'";
 
 // logical operators
 pub const LOP_AND: &str = "&&";

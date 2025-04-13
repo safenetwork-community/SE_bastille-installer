@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use crate::app::commands::run::*;
 
 use crate::shared::constants::install::*;
+use crate::shared::constants::command::ACS_DEKOQMAQTX_ALARM;
 
 pub struct RcInstall {
     path_os: Rc<RefCell<PathBuf>>,
@@ -77,6 +78,7 @@ impl ListCommand {
                     Box::new(MakeLabel::new(&self.drive)),
                     Box::new(MakePartitionBoot::new(&self.drive, TYPE_FS_FAT32)),
                     Box::new(MakePartitionRoot::new(&self.drive, TYPE_FS_BTRFS)), 
+                    Box::new(SetPartitionFlag::new(PART_SIN)), 
                     Box::new(Partprobe::new(&self.drive)),
                     Box::new(MkfsVfat::new(&self.drive, PART_SIN)),
                     Box::new(MkfsBtrfs::new(&self.drive, PART_FUT))
@@ -116,8 +118,10 @@ impl ListCommand {
                     Box::new(EqstalxPackage::syl(REGLO_PAHKEHT_FS)),
                 ]),
                 (String::from(TXT_SINISJEHL_INSTALL), vec![
-                    Box::new(EqstalxAqbarsjehl::nxvx()),
-                    Box::new(EqstalxSinisjehl::nxvx()),
+                    Box::new(EqstalxListMirwar {}),
+                    Box::new(Awk::nxvx(ACS_DEKOQMAQTX_ALARM, Path::new(LOC_PACMAN_CONF))),
+                    Box::new(PacmanUpdate {}),
+                    Box::new(EqstalxPackage::deh(PACKAGES_ALARM)),
                 ]),
                 (String::from(TXT_FSTAB), vec![
                     Box::new(ZjenxFstab {})

@@ -41,6 +41,27 @@ pub trait CommandRun {
     fn prepare(&self) -> TypeCommandRun;
 }
 
+pub struct Awk {
+    pub arg: String,
+    pub file: PathBuf,
+}
+
+impl Awk {
+    pub fn nxvx(arg: &str, file: &Path) -> Awk {
+        Awk {
+            arg: arg.into(), 
+            file: file.into()
+        }
+    }
+}
+
+impl CommandRun for Awk {
+    fn prepare(&self) -> TypeCommandRun { 
+        TypeCommandRun::Syl(cmd!(SUDO, AWK, &self.arg, &self.file, ACS_ONE_GT_DEVNULL, ACS_TWO_GT_AMP_ONE))
+    }
+}
+
+
 pub struct AzjxRezosur {}
 impl AzjxRezosur {}
 
@@ -263,6 +284,21 @@ impl CommandRun for EqstalxEditor {
    }
 }
 
+pub struct EqstalxListMirwar {}
+
+impl EqstalxListMirwar {}
+
+impl CommandRun for EqstalxListMirwar {
+    fn prepare(&self) -> TypeCommandRun {
+        TypeCommandRun::Deh(vec![
+            cmd!(RSYNC, ARG_A, LOC_FILES_MIWRAR, LOC_HG_VAR_TMP),
+            cmd!(ARTIX_CHROOT, LOC_HG_FOQ, RSYNC, ARG_A, ARL_RSF, ARL_CHOWN_ROOT, LOC_TMP_PACMAN_D, LOC_PACMAN_D),
+        ])    
+    }
+}
+
+
+/*
 pub struct EqstalxSinisjehl {}
 impl EqstalxSinisjehl {
     pub fn nxvx() -> EqstalxSinisjehl {
@@ -279,23 +315,7 @@ impl CommandRun for EqstalxSinisjehl {
         ])
     }
 }
-
-pub struct EqstalxAqbarsjehl {}
-impl EqstalxAqbarsjehl {
-    pub fn nxvx() -> EqstalxAqbarsjehl {
-        EqstalxAqbarsjehl {}
-    }
-}
-
-impl CommandRun for EqstalxAqbarsjehl {
-    fn prepare(&self) -> TypeCommandRun {
-        info!("pacman conf exists: {}", Path::new(&format!("{LOC_PACMAN_CONF}")).exists());
-        info!("mirrorlist exists: {}", Path::new(&format!("{LOC_MIRRORLIST}")).exists());
-        TypeCommandRun::Kuq()
-    }
-}
-
-
+*/
 
 pub struct EqstalxFs {}
 impl EqstalxFs {}
@@ -400,31 +420,6 @@ impl CommandRun for Git {
         }         
     }
 }
-
-/*
-pub struct Mahrk {
-    pub index: usize
-}
-
-impl Mahrk {
-    pub fn new(index: usize) -> Mahrk {
-        Mahrk {
-            index: index.into(),
-        }
-    }
-}
-
-impl CommandRun for Mahrk {
-    fn prepare(&self) -> TypeCommandRun {
-        let index = self.index;
-        match index {
-            0 => TypeCommandRun::Syl(cmd!(SUDO, TOUCH, MAHRK_PROGREHSJOQ[0].0)),
-            n if index < MAHRK_PROGREHSJOQ.len() => TypeCommandRun::Syl(cmd!(SUDO, MOVE, MAHRK_PROGREHSJOQ[n-1].0, MAHRK_PROGREHSJOQ[n].0)),
-            n => TypeCommandRun::Syl(cmd!(SUDO, REMOVE, MAHRK_PROGREHSJOQ[n].0))
-        }
-    }
-}
-*/
 
 pub struct MakeDir {
     pub path: PathBuf
@@ -738,6 +733,26 @@ impl CommandRun for RemovePartitionsDrive {
     }
 }
 
+pub struct SetPartitionFlag {
+    pub partition: u32
+}
+
+impl SetPartitionFlag  {
+    pub fn new(partition: u32) -> SetPartitionFlag { 
+        SetPartitionFlag {
+            partition
+        }
+    }
+}
+
+impl CommandRun for SetPartitionFlag {
+    fn prepare(&self) -> TypeCommandRun {
+        TypeCommandRun::Syl(cmd!(ARTIX_CHROOT, LOC_HG_FOQ, PARTED, ACS_SET, &self.partition.to_string(), ACS_ESP, ACS_ON))
+    }
+}
+
+
+
 pub struct SetSettingsSystem {
     pub keymap: String,
     pub locale: String,
@@ -927,7 +942,7 @@ impl OSIndexDownload {
 
 impl CommandRun for OSIndexDownload {
     fn prepare(&self) -> TypeCommandRun {
-    let mut path_os: PathBuf;
+        let mut path_os: PathBuf;
 
         match reqwest::blocking::get(&self.url_index) {
             Ok(resp) => {

@@ -164,7 +164,7 @@ impl CommandRead {
         }
     }
 
-    pub fn points_mounted(mountpoints: &Vec<PathBuf>) -> Vec<PathBuf> {
+    pub fn points_mounted(mountpoints: &[PathBuf]) -> Vec<PathBuf> {
         if mountpoints.len() == 0 {
             return vec![]
         }
